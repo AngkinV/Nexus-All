@@ -1,6 +1,11 @@
 package com.nexus.chat.controller;
 
 import com.nexus.chat.dto.*;
+import com.nexus.chat.model.Contact;
+import com.nexus.chat.repository.ContactRepository;
+import com.nexus.chat.service.PresenceService;
+import com.nexus.chat.service.RedisCacheService;
+import com.nexus.chat.service.RedisMessageRelay;
 import com.nexus.chat.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +27,10 @@ import java.util.Map;
 public class UserController {
 
     private final UserService userService;
+    private final ContactRepository contactRepository;
+    private final PresenceService presenceService;
+    private final RedisCacheService redisCacheService;
+    private final RedisMessageRelay redisMessageRelay;
 
     /**
      * Get user by ID
@@ -139,6 +148,10 @@ public class UserController {
             @RequestParam("file") MultipartFile file) {
         try {
             String avatarUrl = userService.uploadAvatar(id, file);
+
+            // Broadcast avatar update to all contacts
+            notifyProfileUpdate(id, avatarUrl, null);
+
             return ResponseEntity.ok(Map.of("avatarUrl", avatarUrl));
         } catch (IOException | RuntimeException e) {
             return ResponseEntity.badRequest().build();
@@ -337,6 +350,49 @@ public class UserController {
             return ResponseEntity.ok(activities);
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
+        }
+    }
+
+    /**
+     * Notify all contacts about user profile update (avatar/nickname)
+     */
+    private void notifyProfileUpdate(Long userId, String avatarUrl, String nickname) {
+        try {
+            // Get all users who have this user as a contact
+            List<Contact> contacts = contactRepository.findByContactUserId(userId);
+
+            if (contacts.isEmpty()) {
+                log.debug("No contacts to notify for user {}", userId);
+                return;
+            }
+
+            // Build notification payload
+            Map<String, Object> payload = Map.of(
+                    "userId", userId,
+                    "avatarUrl", avatarUrl != null ? avatarUrl : "",
+                    "nickname", nickname != null ? nickname : ""
+            );
+
+            WebSocketMessage wsMessage = new WebSocketMessage(
+                    WebSocketMessage.MessageType.USER_PROFILE_UPDATED,
+                    payload
+            );
+
+            // Notify each contact
+            for (Contact contact : contacts) {
+                Long contactUserId = contact.getUserId();
+                if (presenceService.isUserOnline(contactUserId)) {
+                    String destination = "/topic/user." + contactUserId + ".messages";
+                    redisMessageRelay.sendToUser(contactUserId, destination, wsMessage);
+                } else {
+                    // Queue for offline users
+                    redisCacheService.queueOfflineMessage(contactUserId, wsMessage);
+                }
+            }
+
+            log.info("Profile update notification sent to {} contacts for user {}", contacts.size(), userId);
+        } catch (Exception e) {
+            log.error("Failed to notify profile update for user {}: {}", userId, e.getMessage());
         }
     }
 

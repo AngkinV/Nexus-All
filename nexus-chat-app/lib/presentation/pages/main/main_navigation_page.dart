@@ -2,10 +2,15 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/config/theme_config.dart';
+import '../../../core/network/message_service.dart';
+import '../../../core/storage/secure_storage.dart';
+import '../../widgets/common/in_app_notification_banner.dart';
 import '../home/messages_page.dart';
 import '../contacts/contacts_page.dart';
 import '../community/community_page.dart';
 import '../profile/profile_page.dart';
+import '../chat/chat_page.dart';
+import '../../../data/models/chat/chat_models.dart';
 
 /// 主导航页面 - 包含底部导航栏的容器
 class MainNavigationPage extends StatefulWidget {
@@ -17,6 +22,8 @@ class MainNavigationPage extends StatefulWidget {
 
 class _MainNavigationPageState extends State<MainNavigationPage> {
   int _currentIndex = 0;
+  final MessageService _messageService = MessageService();
+  final SecureStorageService _secureStorage = SecureStorageService();
 
   final List<Widget> _pages = const [
     MessagesPage(),
@@ -24,6 +31,91 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
     CommunityPage(),
     ProfilePage(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _connectWebSocket();
+    _setupInAppNotification();
+  }
+
+  @override
+  void dispose() {
+    // 注意：不要在这里断开 WebSocket，因为用户可能只是切换页面
+    // WebSocket 的断开应该在登出时处理
+    super.dispose();
+  }
+
+  /// 连接 WebSocket
+  Future<void> _connectWebSocket() async {
+    try {
+      final userId = await _secureStorage.getUserId();
+      final token = await _secureStorage.getToken();
+
+      if (userId != null && token != null) {
+        await _messageService.connect(userId, token);
+        debugPrint('🔌 MainNavigationPage: WebSocket 连接成功');
+      }
+    } catch (e) {
+      debugPrint('🔌 MainNavigationPage: WebSocket 连接失败 $e');
+    }
+  }
+
+  /// 设置应用内通知回调
+  void _setupInAppNotification() {
+    _messageService.onShowInAppNotification = (messageData) {
+      if (!mounted) return;
+
+      final chatId = messageData['chatId'] as int?;
+      final senderName = messageData['senderNickname'] as String? ?? '未知用户';
+      final senderAvatar = messageData['senderAvatar'] as String?;
+      final content = messageData['content'] as String? ?? '';
+      final messageType = messageData['messageType'] as String?;
+
+      if (chatId == null) return;
+
+      // 根据消息类型格式化预览
+      String preview = content;
+      if (messageType == 'IMAGE') {
+        preview = '[图片]';
+      } else if (messageType == 'VIDEO') {
+        preview = '[视频]';
+      } else if (messageType == 'AUDIO') {
+        preview = '[语音]';
+      } else if (messageType == 'FILE') {
+        preview = '[文件]';
+      }
+
+      // 显示应用内横幅
+      InAppNotificationOverlay.show(
+        context,
+        senderName: senderName,
+        senderAvatar: senderAvatar,
+        messagePreview: preview,
+        chatId: chatId,
+        onTap: () => _navigateToChat(chatId, messageData),
+      );
+    };
+  }
+
+  /// 跳转到聊天页面
+  void _navigateToChat(int chatId, Map<String, dynamic> messageData) {
+    // 从消息数据构建一个临时的 ChatModel
+    // 实际使用时应该从缓存或 API 获取完整的 ChatModel
+    final chat = ChatModel(
+      id: chatId,
+      type: ChatType.direct,
+      name: messageData['senderNickname'] as String?,
+      avatar: messageData['senderAvatar'] as String?,
+      members: [],
+    );
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ChatPage(chat: chat),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {

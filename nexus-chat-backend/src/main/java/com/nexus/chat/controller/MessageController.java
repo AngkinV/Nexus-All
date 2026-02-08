@@ -1,8 +1,14 @@
 package com.nexus.chat.controller;
 
 import com.nexus.chat.dto.MessageDTO;
+import com.nexus.chat.dto.WebSocketMessage;
+import com.nexus.chat.model.ChatMember;
 import com.nexus.chat.model.Message;
+import com.nexus.chat.repository.ChatMemberRepository;
 import com.nexus.chat.service.MessageService;
+import com.nexus.chat.service.PresenceService;
+import com.nexus.chat.service.RedisCacheService;
+import com.nexus.chat.service.RedisMessageRelay;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +24,10 @@ import java.util.Map;
 public class MessageController {
 
     private final MessageService messageService;
+    private final ChatMemberRepository chatMemberRepository;
+    private final PresenceService presenceService;
+    private final RedisCacheService redisCacheService;
+    private final RedisMessageRelay redisMessageRelay;
 
     @PostMapping
     public ResponseEntity<MessageDTO> sendMessage(@RequestBody Map<String, Object> request) {
@@ -34,10 +44,59 @@ public class MessageController {
                     : Message.MessageType.text;
 
             MessageDTO message = messageService.sendMessage(chatId, senderId, content, messageType, fileUrl, clientMsgId);
+
+            // 发送 WebSocket 通知给所有聊天成员
+            notifyMessageToMembers(chatId, senderId, message);
+
             return ResponseEntity.ok(message);
         } catch (RuntimeException e) {
+            log.error("发送消息失败: {}", e.getMessage());
             return ResponseEntity.badRequest().build();
         }
+    }
+
+    /**
+     * 通过 WebSocket 通知所有聊天成员有新消息
+     */
+    private void notifyMessageToMembers(Long chatId, Long senderId, MessageDTO message) {
+        try {
+            WebSocketMessage wsMessage = new WebSocketMessage(
+                    WebSocketMessage.MessageType.CHAT_MESSAGE,
+                    message);
+
+            // 发送 ACK 给发送者
+            WebSocketMessage ackMessage = new WebSocketMessage(
+                    WebSocketMessage.MessageType.MESSAGE_ACK,
+                    Map.of(
+                            "clientMsgId", message.getClientMsgId() != null ? message.getClientMsgId() : "",
+                            "serverMsgId", message.getId(),
+                            "chatId", chatId,
+                            "sequenceNumber", message.getSequenceNumber() != null ? message.getSequenceNumber() : 0L));
+            sendToUserChannel(senderId, ackMessage);
+
+            // 通知所有成员（除发送者外）
+            List<ChatMember> members = chatMemberRepository.findByChatId(chatId);
+            for (ChatMember member : members) {
+                if (!member.getUserId().equals(senderId)) {
+                    if (presenceService.isUserOnline(member.getUserId())) {
+                        sendToUserChannel(member.getUserId(), wsMessage);
+                    } else {
+                        redisCacheService.queueOfflineMessage(member.getUserId(), wsMessage);
+                    }
+                }
+            }
+            log.debug("WebSocket 通知已发送: chatId={}, senderId={}", chatId, senderId);
+        } catch (Exception e) {
+            log.error("发送 WebSocket 通知失败: chatId={}, error={}", chatId, e.getMessage());
+        }
+    }
+
+    /**
+     * 发送消息到用户的统一频道
+     */
+    private void sendToUserChannel(Long userId, Object payload) {
+        String destination = "/topic/user." + userId + ".messages";
+        redisMessageRelay.sendToUser(userId, destination, payload);
     }
 
     @GetMapping("/chat/{chatId}")

@@ -1,5 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import '../../../core/config/api_config.dart';
 import '../../../core/config/theme_config.dart';
 import '../../../data/models/chat/chat_models.dart';
 
@@ -158,11 +160,14 @@ class _UserProfilePageState extends State<UserProfilePage> {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(24),
-                child: widget.user.avatarUrl != null
-                    ? Image.network(
-                        widget.user.avatarUrl!,
+                child: widget.user.avatarUrl != null && widget.user.avatarUrl!.isNotEmpty
+                    ? CachedNetworkImage(
+                        imageUrl: widget.user.avatarUrl!.startsWith('http')
+                            ? widget.user.avatarUrl!
+                            : '${ApiConfig.getBaseUrl()}${widget.user.avatarUrl}',
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) =>
+                        placeholder: (_, __) => _buildDefaultAvatar(widget.user.displayName),
+                        errorWidget: (_, __, ___) =>
                             _buildDefaultAvatar(widget.user.displayName),
                       )
                     : _buildDefaultAvatar(widget.user.displayName),

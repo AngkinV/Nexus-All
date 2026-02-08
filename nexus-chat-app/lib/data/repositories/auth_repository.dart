@@ -1,4 +1,5 @@
 import '../../core/storage/secure_storage.dart';
+import '../../core/state/user_state_manager.dart';
 import '../datasources/remote/auth_api_service.dart';
 import '../models/auth/auth_models.dart';
 
@@ -6,6 +7,7 @@ import '../models/auth/auth_models.dart';
 class AuthRepository {
   final AuthApiService _authApi = AuthApiService();
   final SecureStorageService _secureStorage = SecureStorageService();
+  final UserStateManager _userStateManager = UserStateManager.instance;
 
   /// 发送验证码
   Future<bool> sendVerificationCode(String email, {String type = 'REGISTER'}) async {
@@ -38,6 +40,9 @@ class AuthRepository {
     // 保存认证信息
     await _saveAuthData(response);
 
+    // 更新全局用户状态
+    await _userStateManager.updateUser(response.user);
+
     return response.user;
   }
 
@@ -56,6 +61,9 @@ class AuthRepository {
     // 保存认证信息
     await _saveAuthData(response);
 
+    // 更新全局用户状态
+    await _userStateManager.updateUser(response.user);
+
     return response.user;
   }
 
@@ -69,6 +77,8 @@ class AuthRepository {
         // 忽略登出API错误
       }
     }
+    // 清除全局用户状态
+    await _userStateManager.clear();
     // 软登出：保留账号记忆
     await _secureStorage.softLogout();
   }
@@ -83,6 +93,8 @@ class AuthRepository {
         // 忽略登出API错误
       }
     }
+    // 清除全局用户状态
+    await _userStateManager.clear();
     await _secureStorage.clearAll();
   }
 

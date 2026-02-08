@@ -1,9 +1,14 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import '../../../core/config/api_config.dart';
 import '../../../core/config/theme_config.dart';
+import '../../../core/state/user_state_manager.dart';
 import '../../../data/repositories/auth_repository.dart';
 import '../../../data/models/auth/auth_models.dart';
 import 'settings_page.dart';
+import 'profile_edit_page.dart';
 
 /// 个人中心页面
 class ProfilePage extends StatefulWidget {
@@ -15,13 +20,34 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   final AuthRepository _authRepository = AuthRepository();
+  final UserStateManager _userStateManager = UserStateManager.instance;
+
   UserModel? _currentUser;
   bool _isLoading = true;
+  StreamSubscription<UserModel?>? _userSubscription;
 
   @override
   void initState() {
     super.initState();
     _loadCurrentUser();
+    _setupUserListener();
+  }
+
+  @override
+  void dispose() {
+    _userSubscription?.cancel();
+    super.dispose();
+  }
+
+  /// 监听用户状态变化
+  void _setupUserListener() {
+    _userSubscription = _userStateManager.userStream.listen((user) {
+      if (mounted && user != null) {
+        setState(() {
+          _currentUser = user;
+        });
+      }
+    });
   }
 
   Future<void> _loadCurrentUser() async {
@@ -79,21 +105,9 @@ class _ProfilePageState extends State<ProfilePage> {
                         onTap: () {},
                       ),
                       _MenuItemData(
-                        icon: Icons.photo_library,
+                        icon: Icons.public,
                         iconColor: const Color(0xFF3B82F6),
-                        title: '朋友圈',
-                        onTap: () {},
-                      ),
-                      _MenuItemData(
-                        icon: Icons.credit_card,
-                        iconColor: const Color(0xFF60A5FA),
-                        title: '卡包',
-                        onTap: () {},
-                      ),
-                      _MenuItemData(
-                        icon: Icons.emoji_emotions,
-                        iconColor: const Color(0xFFEAB308),
-                        title: '表情',
+                        title: '社区',
                         onTap: () {},
                       ),
                     ],
@@ -141,8 +155,18 @@ class _ProfilePageState extends State<ProfilePage> {
       child: SafeArea(
         bottom: false,
         child: InkWell(
-          onTap: () {
-            // TODO: 跳转到个人资料编辑页
+          onTap: () async {
+            // 跳转到个人资料编辑页
+            final result = await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ProfileEditPage(user: _currentUser!),
+              ),
+            );
+            // 如果返回了更新的用户数据，刷新页面
+            if (result == true) {
+              _loadCurrentUser();
+            }
           },
           child: Padding(
             padding: const EdgeInsets.fromLTRB(24, 32, 16, 32),
@@ -165,12 +189,13 @@ class _ProfilePageState extends State<ProfilePage> {
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(14),
                     child: avatarUrl != null && avatarUrl.isNotEmpty
-                        ? Image.network(
-                            avatarUrl,
+                        ? CachedNetworkImage(
+                            imageUrl: avatarUrl.startsWith('http')
+                                ? avatarUrl
+                                : '${ApiConfig.getBaseUrl()}$avatarUrl',
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return _buildDefaultAvatar(displayName, isDark);
-                            },
+                            placeholder: (context, url) => _buildDefaultAvatar(displayName, isDark),
+                            errorWidget: (context, url, error) => _buildDefaultAvatar(displayName, isDark),
                           )
                         : _buildDefaultAvatar(displayName, isDark),
                   ),

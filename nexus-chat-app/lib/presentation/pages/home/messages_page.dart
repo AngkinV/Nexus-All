@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import '../../../core/config/api_config.dart';
 import '../../../core/config/theme_config.dart';
 import '../../../core/network/message_service.dart';
 import '../../../data/repositories/auth_repository.dart';
@@ -29,7 +31,6 @@ class _MessagesPageState extends State<MessagesPage> with WidgetsBindingObserver
   String? _errorMessage;
 
   StreamSubscription<int>? _chatUpdateSubscription;
-  Timer? _pollingTimer;
   Timer? _uiRefreshTimer;
 
   @override
@@ -38,7 +39,6 @@ class _MessagesPageState extends State<MessagesPage> with WidgetsBindingObserver
     WidgetsBinding.instance.addObserver(this);
     _loadData();
     _setupListeners();
-    _startPolling();
     _startUiRefresh();
   }
 
@@ -51,20 +51,10 @@ class _MessagesPageState extends State<MessagesPage> with WidgetsBindingObserver
   }
 
   void _setupListeners() {
-    // 监听聊天更新通知
+    // 监听聊天更新通知（来自 WebSocket）
     _chatUpdateSubscription = _messageService.chatUpdateStream.listen((chatId) {
       debugPrint('📨 MessagesPage: 收到聊天更新通知 chatId=$chatId');
       _refreshChats();
-    });
-  }
-
-  /// 启动定时轮询（获取新数据）
-  void _startPolling() {
-    // 每10秒刷新一次聊天列表
-    _pollingTimer = Timer.periodic(const Duration(seconds: 10), (_) {
-      if (mounted) {
-        _refreshChats();
-      }
     });
   }
 
@@ -132,7 +122,6 @@ class _MessagesPageState extends State<MessagesPage> with WidgetsBindingObserver
   void dispose() {
     _searchController.dispose();
     _chatUpdateSubscription?.cancel();
-    _pollingTimer?.cancel();
     _uiRefreshTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -461,6 +450,14 @@ class _MessagesPageState extends State<MessagesPage> with WidgetsBindingObserver
   Widget _buildAvatar(ChatModel chat, bool isDark, bool isOnline) {
     final avatarUrl = chat.displayAvatar;
 
+    // 构建完整的头像 URL
+    String? fullAvatarUrl;
+    if (avatarUrl != null && avatarUrl.isNotEmpty) {
+      fullAvatarUrl = avatarUrl.startsWith('http')
+          ? avatarUrl
+          : '${ApiConfig.getBaseUrl()}$avatarUrl';
+    }
+
     return Stack(
       children: [
         Container(
@@ -477,13 +474,12 @@ class _MessagesPageState extends State<MessagesPage> with WidgetsBindingObserver
             color: isDark ? Colors.grey[800] : Colors.grey[200],
           ),
           child: ClipOval(
-            child: avatarUrl != null && avatarUrl.isNotEmpty
-                ? Image.network(
-                    avatarUrl,
+            child: fullAvatarUrl != null
+                ? CachedNetworkImage(
+                    imageUrl: fullAvatarUrl,
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return _buildDefaultAvatar(chat, isDark);
-                    },
+                    placeholder: (context, url) => _buildDefaultAvatar(chat, isDark),
+                    errorWidget: (context, url, error) => _buildDefaultAvatar(chat, isDark),
                   )
                 : _buildDefaultAvatar(chat, isDark),
           ),

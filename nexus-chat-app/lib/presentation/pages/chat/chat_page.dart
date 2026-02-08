@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import '../../../core/config/api_config.dart';
 import '../../../core/config/theme_config.dart';
 import '../../../core/network/message_service.dart';
 import '../../../data/models/chat/chat_models.dart';
@@ -32,7 +34,6 @@ class _ChatPageState extends State<ChatPage> {
   int? _currentUserId;
 
   StreamSubscription<int>? _messageSubscription;
-  Timer? _pollingTimer;
 
   // 判断是否为群聊
   bool get _isGroup => widget.chat.isGroup;
@@ -42,15 +43,17 @@ class _ChatPageState extends State<ChatPage> {
     super.initState();
     _loadData();
     _setupMessageListener();
-    _startPolling();
+    // 设置当前活跃聊天，用于通知判断
+    _messageService.setActiveChatId(widget.chat.id);
   }
 
   @override
   void dispose() {
+    // 清除活跃聊天
+    _messageService.setActiveChatId(null);
     _messageController.dispose();
     _scrollController.dispose();
     _messageSubscription?.cancel();
-    _pollingTimer?.cancel();
     super.dispose();
   }
 
@@ -58,20 +61,13 @@ class _ChatPageState extends State<ChatPage> {
     _messageSubscription = _messageService.messageUpdateStream.listen((chatId) {
       if (chatId == widget.chat.id) {
         debugPrint('📨 ChatPage: 收到消息更新通知');
-        _pollForNewMessages();
+        _loadNewMessages();
       }
     });
   }
 
-  void _startPolling() {
-    _pollingTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (mounted && _currentUserId != null) {
-        _pollForNewMessages();
-      }
-    });
-  }
-
-  Future<void> _pollForNewMessages() async {
+  /// 加载新消息（WebSocket 触发）
+  Future<void> _loadNewMessages() async {
     if (_currentUserId == null) return;
 
     try {
@@ -99,9 +95,11 @@ class _ChatPageState extends State<ChatPage> {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           _scrollToBottom();
         });
+        // 标记消息已读
+        await _chatRepository.markChatMessagesAsRead(widget.chat.id, _currentUserId!);
       }
     } catch (e) {
-      debugPrint('📨 ChatPage: 轮询失败 $e');
+      debugPrint('📨 ChatPage: 加载新消息失败 $e');
     }
   }
 
@@ -463,6 +461,14 @@ class _ChatPageState extends State<ChatPage> {
     final avatarUrl = widget.chat.displayAvatar;
     final displayName = widget.chat.displayName;
 
+    // 构建完整的头像 URL
+    String? fullAvatarUrl;
+    if (avatarUrl != null && avatarUrl.isNotEmpty) {
+      fullAvatarUrl = avatarUrl.startsWith('http')
+          ? avatarUrl
+          : '${ApiConfig.getBaseUrl()}$avatarUrl';
+    }
+
     return Stack(
       children: [
         Container(
@@ -474,11 +480,12 @@ class _ChatPageState extends State<ChatPage> {
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(20),
-            child: avatarUrl != null
-                ? Image.network(
-                    avatarUrl,
+            child: fullAvatarUrl != null
+                ? CachedNetworkImage(
+                    imageUrl: fullAvatarUrl,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _buildDefaultAvatar(displayName),
+                    placeholder: (_, __) => _buildDefaultAvatar(displayName),
+                    errorWidget: (_, __, ___) => _buildDefaultAvatar(displayName),
                   )
                 : _buildDefaultAvatar(displayName),
           ),
@@ -758,11 +765,23 @@ class _ChatPageState extends State<ChatPage> {
                 : avatarColor.withValues(alpha: 0.15),
           ),
           child: ClipOval(
-            child: message.senderAvatar != null
-                ? Image.network(
-                    message.senderAvatar!,
+            child: message.senderAvatar != null && message.senderAvatar!.isNotEmpty
+                ? CachedNetworkImage(
+                    imageUrl: message.senderAvatar!.startsWith('http')
+                        ? message.senderAvatar!
+                        : '${ApiConfig.getBaseUrl()}${message.senderAvatar}',
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Center(
+                    placeholder: (_, __) => Center(
+                      child: Text(
+                        (message.senderNickname ?? '?')[0].toUpperCase(),
+                        style: TextStyle(
+                          color: isAdmin ? const Color(0xFF047857) : avatarColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                    errorWidget: (_, __, ___) => Center(
                       child: Text(
                         (message.senderNickname ?? '?')[0].toUpperCase(),
                         style: TextStyle(

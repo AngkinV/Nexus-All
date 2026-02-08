@@ -1,6 +1,8 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import '../../../core/config/api_config.dart';
 import '../../../core/config/theme_config.dart';
 import '../../../data/repositories/auth_repository.dart';
 import '../../../data/repositories/contact_repository.dart';
@@ -614,6 +616,14 @@ class _ContactsPageState extends State<ContactsPage> {
   Widget _buildAvatar(ContactModel contact, bool isDark) {
     final avatarUrl = contact.avatarUrl;
 
+    // 构建完整的头像 URL
+    String? fullAvatarUrl;
+    if (avatarUrl != null && avatarUrl.isNotEmpty) {
+      fullAvatarUrl = avatarUrl.startsWith('http')
+          ? avatarUrl
+          : '${ApiConfig.getBaseUrl()}$avatarUrl';
+    }
+
     return Container(
       width: 44,
       height: 44,
@@ -623,13 +633,12 @@ class _ContactsPageState extends State<ContactsPage> {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(10),
-        child: avatarUrl != null && avatarUrl.isNotEmpty
-            ? Image.network(
-                avatarUrl,
+        child: fullAvatarUrl != null
+            ? CachedNetworkImage(
+                imageUrl: fullAvatarUrl,
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return _buildDefaultAvatar(contact, isDark);
-                },
+                placeholder: (context, url) => _buildDefaultAvatar(contact, isDark),
+                errorWidget: (context, url, error) => _buildDefaultAvatar(contact, isDark),
               )
             : _buildDefaultAvatar(contact, isDark),
       ),

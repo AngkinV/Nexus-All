@@ -39,6 +39,9 @@ dependencies:
   # 权限
   permission_handler: ^11.2.0
 
+  # 通知
+  flutter_local_notifications: ^17.2.4
+
   # 媒体
   image_picker: ^1.0.7
   image_cropper: ^8.0.2

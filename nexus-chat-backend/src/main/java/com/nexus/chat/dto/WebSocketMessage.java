@@ -25,6 +25,7 @@ public class WebSocketMessage {
         USER_ONLINE,
         USER_OFFLINE,
         USER_STATUS_CHANGED,
+        USER_PROFILE_UPDATED,  // User avatar/nickname updated
 
         // Group events
         GROUP_CREATED,
