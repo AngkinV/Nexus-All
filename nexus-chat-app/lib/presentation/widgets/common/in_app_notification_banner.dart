@@ -194,12 +194,9 @@ class _InAppNotificationBannerState extends State<InAppNotificationBanner>
   }
 
   Widget _buildAvatar(bool isDark) {
-    if (widget.senderAvatar != null && widget.senderAvatar!.isNotEmpty) {
-      String avatarUrl = widget.senderAvatar!;
-      if (!avatarUrl.startsWith('http')) {
-        avatarUrl = '${ApiConfig.getBaseUrl()}$avatarUrl';
-      }
+    final fullAvatarUrl = ApiConfig.getFullUrl(widget.senderAvatar);
 
+    if (fullAvatarUrl.isNotEmpty) {
       return Container(
         width: 40,
         height: 40,
@@ -216,7 +213,7 @@ class _InAppNotificationBannerState extends State<InAppNotificationBanner>
         child: ClipRRect(
           borderRadius: BorderRadius.circular(10),
           child: CachedNetworkImage(
-            imageUrl: avatarUrl,
+            imageUrl: fullAvatarUrl,
             width: 40,
             height: 40,
             fit: BoxFit.cover,

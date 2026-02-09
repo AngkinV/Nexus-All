@@ -132,6 +132,12 @@ public class UserController {
             @RequestBody UpdateProfileRequest request) {
         try {
             UserProfileDTO updated = userService.updateUserProfile(id, request);
+
+            // Broadcast nickname update to all contacts
+            if (request.getNickname() != null && !request.getNickname().isEmpty()) {
+                notifyProfileUpdate(id, updated.getAvatarUrl(), request.getNickname());
+            }
+
             return ResponseEntity.ok(updated);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().build();
@@ -172,6 +178,10 @@ public class UserController {
                 return ResponseEntity.badRequest().build();
             }
             String avatarUrl = userService.uploadAvatarBase64(id, base64Image);
+
+            // Broadcast avatar update to all contacts
+            notifyProfileUpdate(id, avatarUrl, null);
+
             return ResponseEntity.ok(Map.of("avatarUrl", avatarUrl));
         } catch (IOException | RuntimeException e) {
             return ResponseEntity.badRequest().build();

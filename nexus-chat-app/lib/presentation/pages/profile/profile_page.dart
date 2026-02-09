@@ -147,7 +147,7 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget _buildUserHeader(bool isDark) {
     final user = _currentUser;
     final displayName = user?.displayName ?? '未登录';
-    final avatarUrl = user?.avatarUrl;
+    final fullAvatarUrl = ApiConfig.getFullUrl(user?.avatarUrl);
     final nexusId = user?.username ?? 'Nexus_${user?.id ?? '000000'}';
 
     return Container(
@@ -188,11 +188,9 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(14),
-                    child: avatarUrl != null && avatarUrl.isNotEmpty
+                    child: fullAvatarUrl.isNotEmpty
                         ? CachedNetworkImage(
-                            imageUrl: avatarUrl.startsWith('http')
-                                ? avatarUrl
-                                : '${ApiConfig.getBaseUrl()}$avatarUrl',
+                            imageUrl: fullAvatarUrl,
                             fit: BoxFit.cover,
                             placeholder: (context, url) => _buildDefaultAvatar(displayName, isDark),
                             errorWidget: (context, url, error) => _buildDefaultAvatar(displayName, isDark),

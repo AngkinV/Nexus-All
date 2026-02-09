@@ -1,12 +1,15 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/config/api_config.dart';
 import '../../../core/config/theme_config.dart';
+import '../../../core/network/websocket_service.dart';
 import '../../../data/repositories/auth_repository.dart';
 import '../../../data/repositories/contact_repository.dart';
 import '../../../data/models/contact/contact_models.dart';
+import '../../../data/models/websocket/websocket_message.dart';
 import 'add_contact_page.dart';
 import 'friend_requests_page.dart';
 import 'create_group_page.dart';
@@ -25,6 +28,7 @@ class _ContactsPageState extends State<ContactsPage> {
   final AuthRepository _authRepository = AuthRepository();
   final ContactRepository _contactRepository = ContactRepository();
   final ChatRepository _chatRepository = ChatRepository();
+  final WebSocketService _webSocketService = WebSocketService();
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
@@ -39,18 +43,72 @@ class _ContactsPageState extends State<ContactsPage> {
   // 字母索引键映射
   final Map<String, GlobalKey> _sectionKeys = {};
 
+  // WebSocket 订阅
+  StreamSubscription<WebSocketMessage>? _wsSubscription;
+
+  // 头像版本缓存（用于强制刷新）
+  final Map<int, int> _avatarVersions = {};
+
   @override
   void initState() {
     super.initState();
     _loadData();
     _scrollController.addListener(_onScroll);
+    _subscribeToWebSocket();
   }
 
   @override
   void dispose() {
     _searchController.dispose();
     _scrollController.dispose();
+    _wsSubscription?.cancel();
     super.dispose();
+  }
+
+  /// 订阅 WebSocket 消息
+  void _subscribeToWebSocket() {
+    _wsSubscription = _webSocketService.messageStream.listen(_onWebSocketMessage);
+  }
+
+  /// 处理 WebSocket 消息
+  void _onWebSocketMessage(WebSocketMessage message) {
+    switch (message.type) {
+      case WebSocketMessageType.userProfileUpdated:
+        _handleUserProfileUpdated(message);
+        break;
+      case WebSocketMessageType.contactAdded:
+      case WebSocketMessageType.contactRemoved:
+      case WebSocketMessageType.contactRequestAccepted:
+        // 联系人变化时刷新列表
+        _refreshContacts();
+        break;
+      default:
+        break;
+    }
+  }
+
+  /// 处理用户资料更新（头像/昵称变化）
+  Future<void> _handleUserProfileUpdated(WebSocketMessage message) async {
+    final userId = message.payload['userId'] as int?;
+    final avatarUrl = message.payload['avatarUrl'] as String?;
+
+    if (userId == null) return;
+
+    // 如果有旧头像URL，清除缓存
+    if (avatarUrl != null) {
+      final fullUrl = ApiConfig.getFullUrl(avatarUrl);
+      await CachedNetworkImage.evictFromCache(fullUrl);
+    }
+
+    // 更新头像版本号，强制刷新
+    _avatarVersions[userId] = DateTime.now().millisecondsSinceEpoch;
+
+    // 刷新联系人列表
+    if (mounted) {
+      await _loadContacts();
+    }
+
+    debugPrint('ContactsPage: 用户 $userId 资料已更新，头像缓存已清除');
   }
 
   Future<void> _loadData() async {
@@ -614,15 +672,10 @@ class _ContactsPageState extends State<ContactsPage> {
 
   /// 构建头像
   Widget _buildAvatar(ContactModel contact, bool isDark) {
-    final avatarUrl = contact.avatarUrl;
-
-    // 构建完整的头像 URL
-    String? fullAvatarUrl;
-    if (avatarUrl != null && avatarUrl.isNotEmpty) {
-      fullAvatarUrl = avatarUrl.startsWith('http')
-          ? avatarUrl
-          : '${ApiConfig.getBaseUrl()}$avatarUrl';
-    }
+    final fullAvatarUrl = ApiConfig.getFullUrl(contact.avatarUrl);
+    // 使用版本号作为缓存key，当版本号变化时强制刷新
+    final version = _avatarVersions[contact.userId] ?? 0;
+    final cacheKey = '${contact.userId}_$version';
 
     return Container(
       width: 44,
@@ -633,9 +686,10 @@ class _ContactsPageState extends State<ContactsPage> {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(10),
-        child: fullAvatarUrl != null
+        child: fullAvatarUrl.isNotEmpty
             ? CachedNetworkImage(
                 imageUrl: fullAvatarUrl,
+                cacheKey: cacheKey,
                 fit: BoxFit.cover,
                 placeholder: (context, url) => _buildDefaultAvatar(contact, isDark),
                 errorWidget: (context, url, error) => _buildDefaultAvatar(contact, isDark),

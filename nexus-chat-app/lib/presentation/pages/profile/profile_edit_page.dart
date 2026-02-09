@@ -383,7 +383,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
 
   /// 构建头像预览
   Widget _buildAvatarPreview(bool isDark) {
-    final avatarUrl = _user.avatarUrl;
+    final fullAvatarUrl = ApiConfig.getFullUrl(_user.avatarUrl);
     final displayName = _user.displayName;
 
     return Row(
@@ -404,11 +404,9 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(10),
-            child: avatarUrl != null && avatarUrl.isNotEmpty
+            child: fullAvatarUrl.isNotEmpty
                 ? CachedNetworkImage(
-                    imageUrl: avatarUrl.startsWith('http')
-                        ? avatarUrl
-                        : '${ApiConfig.getBaseUrl()}$avatarUrl',
+                    imageUrl: fullAvatarUrl,
                     fit: BoxFit.cover,
                     placeholder: (context, url) => _buildDefaultAvatar(displayName, isDark),
                     errorWidget: (context, url, error) => _buildDefaultAvatar(displayName, isDark),

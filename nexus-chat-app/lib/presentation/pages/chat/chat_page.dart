@@ -458,16 +458,8 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Widget _buildChatAvatar() {
-    final avatarUrl = widget.chat.displayAvatar;
     final displayName = widget.chat.displayName;
-
-    // 构建完整的头像 URL
-    String? fullAvatarUrl;
-    if (avatarUrl != null && avatarUrl.isNotEmpty) {
-      fullAvatarUrl = avatarUrl.startsWith('http')
-          ? avatarUrl
-          : '${ApiConfig.getBaseUrl()}$avatarUrl';
-    }
+    final fullAvatarUrl = ApiConfig.getFullUrl(widget.chat.displayAvatar);
 
     return Stack(
       children: [
@@ -480,7 +472,7 @@ class _ChatPageState extends State<ChatPage> {
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(20),
-            child: fullAvatarUrl != null
+            child: fullAvatarUrl.isNotEmpty
                 ? CachedNetworkImage(
                     imageUrl: fullAvatarUrl,
                     fit: BoxFit.cover,
@@ -749,6 +741,7 @@ class _ChatPageState extends State<ChatPage> {
   Widget _buildGroupReceivedMessage(MessageModel message, bool isDark, bool isAdmin) {
     // 生成头像背景色
     final avatarColor = _getAvatarColor(message.senderNickname ?? '');
+    final fullAvatarUrl = ApiConfig.getFullUrl(message.senderAvatar);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -765,11 +758,9 @@ class _ChatPageState extends State<ChatPage> {
                 : avatarColor.withValues(alpha: 0.15),
           ),
           child: ClipOval(
-            child: message.senderAvatar != null && message.senderAvatar!.isNotEmpty
+            child: fullAvatarUrl.isNotEmpty
                 ? CachedNetworkImage(
-                    imageUrl: message.senderAvatar!.startsWith('http')
-                        ? message.senderAvatar!
-                        : '${ApiConfig.getBaseUrl()}${message.senderAvatar}',
+                    imageUrl: fullAvatarUrl,
                     fit: BoxFit.cover,
                     placeholder: (_, __) => Center(
                       child: Text(

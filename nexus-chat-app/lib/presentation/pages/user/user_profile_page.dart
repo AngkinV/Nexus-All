@@ -118,6 +118,8 @@ class _UserProfilePageState extends State<UserProfilePage> {
   }
 
   Widget _buildProfileCard(bool isDark) {
+    final fullAvatarUrl = ApiConfig.getFullUrl(widget.user.avatarUrl);
+
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(24),
@@ -160,11 +162,9 @@ class _UserProfilePageState extends State<UserProfilePage> {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(24),
-                child: widget.user.avatarUrl != null && widget.user.avatarUrl!.isNotEmpty
+                child: fullAvatarUrl.isNotEmpty
                     ? CachedNetworkImage(
-                        imageUrl: widget.user.avatarUrl!.startsWith('http')
-                            ? widget.user.avatarUrl!
-                            : '${ApiConfig.getBaseUrl()}${widget.user.avatarUrl}',
+                        imageUrl: fullAvatarUrl,
                         fit: BoxFit.cover,
                         placeholder: (_, __) => _buildDefaultAvatar(widget.user.displayName),
                         errorWidget: (_, __, ___) =>

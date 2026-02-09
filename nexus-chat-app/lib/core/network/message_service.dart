@@ -264,10 +264,7 @@ class MessageService with WidgetsBindingObserver {
     if (avatarUrl != null && avatarUrl.isNotEmpty) {
       try {
         // 构建完整的头像URL
-        String fullAvatarUrl = avatarUrl;
-        if (!avatarUrl.startsWith('http')) {
-          fullAvatarUrl = '${ApiConfig.getBaseUrl()}$avatarUrl';
-        }
+        final fullAvatarUrl = ApiConfig.getFullUrl(avatarUrl);
         // 注意：我们无法清除旧的URL缓存（因为不知道旧URL），
         // 但新URL应该会自动加载新图片
         debugPrint('📨 MessageService: 新头像URL $fullAvatarUrl');

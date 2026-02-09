@@ -448,15 +448,7 @@ class _MessagesPageState extends State<MessagesPage> with WidgetsBindingObserver
 
   /// 构建头像
   Widget _buildAvatar(ChatModel chat, bool isDark, bool isOnline) {
-    final avatarUrl = chat.displayAvatar;
-
-    // 构建完整的头像 URL
-    String? fullAvatarUrl;
-    if (avatarUrl != null && avatarUrl.isNotEmpty) {
-      fullAvatarUrl = avatarUrl.startsWith('http')
-          ? avatarUrl
-          : '${ApiConfig.getBaseUrl()}$avatarUrl';
-    }
+    final fullAvatarUrl = ApiConfig.getFullUrl(chat.displayAvatar);
 
     return Stack(
       children: [
@@ -474,7 +466,7 @@ class _MessagesPageState extends State<MessagesPage> with WidgetsBindingObserver
             color: isDark ? Colors.grey[800] : Colors.grey[200],
           ),
           child: ClipOval(
-            child: fullAvatarUrl != null
+            child: fullAvatarUrl.isNotEmpty
                 ? CachedNetworkImage(
                     imageUrl: fullAvatarUrl,
                     fit: BoxFit.cover,

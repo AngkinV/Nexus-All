@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 /// API 配置
 ///
 /// 环境切换说明：
@@ -5,6 +7,9 @@
 /// - 生产部署：isProduction = true (部署脚本会自动切换)
 class ApiConfig {
   ApiConfig._();
+
+  /// 缓存当前平台是否为 Android
+  static final bool _isAndroid = Platform.isAndroid;
 
   // ===== 开发环境 =====
   // Android 模拟器使用 10.0.2.2 访问本机
@@ -22,7 +27,7 @@ class ApiConfig {
 
   // ===== 环境配置 =====
   // 本地开发设为 false，部署脚本会自动切换为 true
-  static const bool isProduction = true;
+  static const bool isProduction = false;
 
   // 根据平台获取基础URL
   static String getBaseUrl({bool isAndroid = false}) {
@@ -58,4 +63,21 @@ class ApiConfig {
   static const int connectTimeout = 30000; // 30秒
   static const int receiveTimeout = 30000;
   static const int sendTimeout = 30000;
+
+  /// 获取当前平台的基础 URL（自动检测平台）
+  static String get currentBaseUrl => getBaseUrl(isAndroid: _isAndroid);
+
+  /// 获取完整的资源 URL（头像、文件等）
+  /// 自动处理相对路径和绝对路径，自动检测平台
+  static String getFullUrl(String? path) {
+    if (path == null || path.isEmpty) {
+      return '';
+    }
+    // 已经是完整 URL
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return path;
+    }
+    // 拼接基础 URL（自动检测平台）
+    return '$currentBaseUrl$path';
+  }
 }
