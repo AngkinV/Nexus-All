@@ -9,10 +9,13 @@ import '../../../data/repositories/auth_repository.dart';
 import '../../../data/models/auth/auth_models.dart';
 import 'settings_page.dart';
 import 'profile_edit_page.dart';
+import '../../../data/datasources/remote/user_api_service.dart';
 
 /// 个人中心页面
 class ProfilePage extends StatefulWidget {
-  const ProfilePage({super.key});
+  final VoidCallback? onNavigateToCommunity;
+
+  const ProfilePage({super.key, this.onNavigateToCommunity});
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -21,10 +24,15 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   final AuthRepository _authRepository = AuthRepository();
   final UserStateManager _userStateManager = UserStateManager.instance;
+  final UserApiService _userApiService = UserApiService();
 
   UserModel? _currentUser;
   bool _isLoading = true;
   StreamSubscription<UserModel?>? _userSubscription;
+
+  int _followingCount = 0;
+  int _followerCount = 0;
+  int _postCount = 0;
 
   @override
   void initState() {
@@ -56,7 +64,33 @@ class _ProfilePageState extends State<ProfilePage> {
         _currentUser = user;
         _isLoading = false;
       });
+      _loadUserStats();
     }
+  }
+
+  Future<void> _loadUserStats() async {
+    if (_currentUser == null) return;
+    try {
+      final stats = await _userApiService.getUserStats(_currentUser!.id);
+      if (mounted) {
+        setState(() {
+          _followingCount = stats.followingCount;
+          _followerCount = stats.followerCount;
+          _postCount = stats.postCount;
+        });
+      }
+    } catch (e) {
+      debugPrint('Failed to load user stats: $e');
+    }
+  }
+
+  String _formatCount(int count) {
+    if (count >= 10000) {
+      return '${(count / 10000).toStringAsFixed(1)}w';
+    } else if (count >= 1000) {
+      return '${(count / 1000).toStringAsFixed(1)}k';
+    }
+    return '$count';
   }
 
   void _navigateToEditProfile() async {
@@ -324,7 +358,7 @@ class _ProfilePageState extends State<ProfilePage> {
             child: Column(
               children: [
                 Text(
-                  '248',
+                  _formatCount(_followingCount),
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -369,7 +403,7 @@ class _ProfilePageState extends State<ProfilePage> {
             child: Column(
               children: [
                 Text(
-                  '14.2k',
+                  _formatCount(_followerCount),
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -411,7 +445,7 @@ class _ProfilePageState extends State<ProfilePage> {
             child: Column(
               children: [
                 Text(
-                  '89',
+                  _formatCount(_postCount),
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -604,7 +638,9 @@ class _ProfilePageState extends State<ProfilePage> {
   /// 社区横幅 - 翡翠绿渐变
   Widget _buildCommunityBanner(bool isDark) {
     return GestureDetector(
-      onTap: () {},
+      onTap: () {
+        widget.onNavigateToCommunity?.call();
+      },
       child: Container(
         height: 110,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),

@@ -25,12 +25,19 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
   final MessageService _messageService = MessageService();
   final SecureStorageService _secureStorage = SecureStorageService();
 
-  final List<Widget> _pages = const [
-    MessagesPage(),
-    ContactsPage(),
-    CommunityPage(),
-    ProfilePage(),
+  late final List<Widget> _pages = [
+    const MessagesPage(),
+    const ContactsPage(),
+    const CommunityPage(),
+    ProfilePage(onNavigateToCommunity: _navigateToCommunity),
   ];
+
+  /// 从个人中心跳转到社区Tab
+  void _navigateToCommunity() {
+    setState(() {
+      _currentIndex = 2;
+    });
+  }
 
   @override
   void initState() {

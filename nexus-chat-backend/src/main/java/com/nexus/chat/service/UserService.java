@@ -39,6 +39,8 @@ public class UserService {
     private final UserSecuritySettingsRepository securitySettingsRepository;
     private final UserSessionRepository sessionRepository;
     private final UserActivityRepository activityRepository;
+    private final UserFollowRepository userFollowRepository;
+    private final PostRepository postRepository;
 
     // Avatar upload directory (can be configured)
     private static final String AVATAR_UPLOAD_DIR = "uploads/avatars/";
@@ -336,8 +338,12 @@ public class UserService {
         long contactCount = contactRepository.findByUserId(userId).size();
         long groupCount = chatRepository.countUserGroups(userId);
         long messageCount = messageRepository.countBySenderId(userId);
+        long followingCount = userFollowRepository.countByFollowerId(userId);
+        long followerCount = userFollowRepository.countByFollowingId(userId);
+        long postCount = postRepository.countByAuthorId(userId);
 
-        return new UserStatsDTO(contactCount, groupCount, messageCount);
+        return new UserStatsDTO(contactCount, groupCount, messageCount,
+                followingCount, followerCount, postCount);
     }
 
     /**

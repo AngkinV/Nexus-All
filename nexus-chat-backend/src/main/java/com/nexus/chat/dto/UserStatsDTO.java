@@ -14,4 +14,7 @@ public class UserStatsDTO {
     private Long contactCount;
     private Long groupCount;
     private Long messageCount;
+    private Long followingCount;
+    private Long followerCount;
+    private Long postCount;
 }
