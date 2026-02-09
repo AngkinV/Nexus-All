@@ -36,6 +36,9 @@ public class PostService {
     private PostBookmarkRepository postBookmarkRepository;
 
     @Autowired
+    private CommentLikeRepository commentLikeRepository;
+
+    @Autowired
     private UserRepository userRepository;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -274,10 +277,10 @@ public class PostService {
     /**
      * 获取帖子的评论
      */
-    public Page<PostCommentDTO> getPostComments(Long postId, int page, int size) {
+    public Page<PostCommentDTO> getPostComments(Long postId, int page, int size, Long currentUserId) {
         Pageable pageable = PageRequest.of(page, size);
         Page<PostComment> comments = postCommentRepository.findByPostIdAndParentIdIsNullOrderByCreatedAtDesc(postId, pageable);
-        return comments.map(this::convertCommentToDTO);
+        return comments.map(c -> convertCommentToDTO(c, currentUserId));
     }
 
     /**
@@ -298,6 +301,44 @@ public class PostService {
         postRepository.save(post);
 
         postCommentRepository.delete(comment);
+    }
+
+    /**
+     * 评论点赞（切换）
+     */
+    @Transactional
+    public PostCommentDTO toggleCommentLike(Long commentId, Long userId) {
+        PostComment comment = postCommentRepository.findById(commentId)
+                .orElseThrow(() -> new RuntimeException("评论不存在"));
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("用户不存在"));
+
+        Optional<CommentLike> existingLike = commentLikeRepository.findByCommentIdAndUserId(commentId, userId);
+
+        if (existingLike.isPresent()) {
+            // 已点赞 -> 取消点赞
+            commentLikeRepository.delete(existingLike.get());
+            comment.setLikeCount(Math.max(0, comment.getLikeCount() - 1));
+        } else {
+            // 未点赞 -> 点赞
+            CommentLike like = new CommentLike();
+            like.setComment(comment);
+            like.setUser(user);
+            commentLikeRepository.save(like);
+            comment.setLikeCount(comment.getLikeCount() + 1);
+        }
+
+        comment = postCommentRepository.save(comment);
+        return convertCommentToDTO(comment, userId);
+    }
+
+    /**
+     * 获取评论的回复列表
+     */
+    public List<PostCommentDTO> getCommentReplies(Long commentId, Long currentUserId) {
+        List<PostComment> replies = postCommentRepository.findByParentIdOrderByCreatedAtAsc(commentId);
+        return replies.stream().map(c -> convertCommentToDTO(c, currentUserId)).toList();
     }
 
     // ==================== 辅助方法 ====================
@@ -363,6 +404,13 @@ public class PostService {
      * 转换评论为DTO
      */
     private PostCommentDTO convertCommentToDTO(PostComment comment) {
+        return convertCommentToDTO(comment, null);
+    }
+
+    /**
+     * 转换评论为DTO（含用户点赞状态）
+     */
+    private PostCommentDTO convertCommentToDTO(PostComment comment, Long currentUserId) {
         PostCommentDTO dto = new PostCommentDTO();
         dto.setId(comment.getId());
         dto.setPostId(comment.getPost().getId());
@@ -380,6 +428,13 @@ public class PostService {
 
         // 统计
         dto.setLikeCount(comment.getLikeCount());
+
+        // 当前用户是否点赞
+        if (currentUserId != null) {
+            dto.setUserLiked(commentLikeRepository.existsByCommentIdAndUserId(comment.getId(), currentUserId));
+        } else {
+            dto.setUserLiked(false);
+        }
 
         // 时间
         dto.setCreatedAt(comment.getCreatedAt());

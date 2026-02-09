@@ -239,9 +239,10 @@ public class PostController {
     public ResponseEntity<?> getPostComments(
             @PathVariable Long postId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) Long userId) {
         try {
-            Page<PostCommentDTO> comments = postService.getPostComments(postId, page, size);
+            Page<PostCommentDTO> comments = postService.getPostComments(postId, page, size, userId);
             return ResponseEntity.ok(comments);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(errorResponse(e.getMessage()));
@@ -258,6 +259,36 @@ public class PostController {
         try {
             postService.deleteComment(commentId, userId);
             return ResponseEntity.ok(successResponse("删除成功"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(errorResponse(e.getMessage()));
+        }
+    }
+
+    /**
+     * 评论点赞
+     * POST /api/posts/comments/{commentId}/like?userId={userId}
+     */
+    @PostMapping("/comments/{commentId}/like")
+    public ResponseEntity<?> likeComment(
+            @PathVariable Long commentId,
+            @RequestParam Long userId) {
+        try {
+            return ResponseEntity.ok(postService.toggleCommentLike(commentId, userId));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(errorResponse(e.getMessage()));
+        }
+    }
+
+    /**
+     * 获取评论的回复列表
+     * GET /api/posts/comments/{commentId}/replies?userId={userId}
+     */
+    @GetMapping("/comments/{commentId}/replies")
+    public ResponseEntity<?> getCommentReplies(
+            @PathVariable Long commentId,
+            @RequestParam(required = false) Long userId) {
+        try {
+            return ResponseEntity.ok(postService.getCommentReplies(commentId, userId));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(errorResponse(e.getMessage()));
         }

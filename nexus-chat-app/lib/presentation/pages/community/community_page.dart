@@ -411,6 +411,40 @@ class _CommunityPageState extends State<CommunityPage> {
     }
   }
 
+  /// 社区卡片快捷评论 - 弹出输入面板直接评论
+  void _showQuickComment(PostModel post) {
+    if (_currentUserId == null) {
+      _showError('请先登录');
+      return;
+    }
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _QuickCommentSheet(
+        isDark: isDark,
+        onSend: (text) async {
+          try {
+            await _postRepository.createComment(
+              postId: post.id,
+              authorId: _currentUserId!,
+              content: text,
+            );
+            final updated = post.copyWith(commentCount: post.commentCount + 1);
+            _updatePostInLists(updated);
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('发送失败')),
+              );
+            }
+          }
+        },
+      ),
+    );
+  }
+
   void _navigateToCreatePost() async {
     final result = await Navigator.push(
       context,
@@ -422,12 +456,15 @@ class _CommunityPageState extends State<CommunityPage> {
   }
 
   void _navigateToDetail(PostModel post) async {
-    final result = await Navigator.push<PostModel>(
+    final result = await Navigator.push<Map<String, dynamic>>(
       context,
       MaterialPageRoute(builder: (_) => PostDetailPage(post: post)),
     );
     if (result != null) {
-      _updatePostInLists(result);
+      final updatedPost = result['post'] as PostModel?;
+      if (updatedPost != null) {
+        _updatePostInLists(updatedPost);
+      }
     }
   }
 
@@ -939,7 +976,7 @@ class _CommunityPageState extends State<CommunityPage> {
 
                       // 评论
                       GestureDetector(
-                        onTap: () {},
+                        onTap: () => _showQuickComment(post),
                         child: Row(
                           children: [
                             Icon(
@@ -1164,5 +1201,140 @@ class _CommunityPageState extends State<CommunityPage> {
       return '${(count / 1000).toStringAsFixed(1)}k';
     }
     return count.toString();
+  }
+}
+
+/// 快捷评论输入面板
+class _QuickCommentSheet extends StatefulWidget {
+  final bool isDark;
+  final Future<void> Function(String text) onSend;
+
+  const _QuickCommentSheet({
+    required this.isDark,
+    required this.onSend,
+  });
+
+  @override
+  State<_QuickCommentSheet> createState() => _QuickCommentSheetState();
+}
+
+class _QuickCommentSheetState extends State<_QuickCommentSheet> {
+  final TextEditingController _controller = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
+  bool _isSending = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _focusNode.requestFocus();
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  Future<void> _send() async {
+    final text = _controller.text.trim();
+    if (text.isEmpty || _isSending) return;
+    setState(() => _isSending = true);
+    await widget.onSend(text);
+    if (mounted) Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final surfaceColor = widget.isDark ? const Color(0xFF2C2C2E) : Colors.white;
+    final inputBg = widget.isDark ? Colors.black.withValues(alpha: 0.2) : const Color(0xFFF7F5F0);
+    final hintColor = widget.isDark ? Colors.grey[600] : Colors.grey[500];
+    final textColor = widget.isDark ? Colors.white : const Color(0xFF1F2937);
+    final mutedColor = widget.isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280);
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Container(
+        decoration: BoxDecoration(
+          color: surfaceColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  constraints: const BoxConstraints(maxHeight: 120),
+                  decoration: BoxDecoration(
+                    color: inputBg,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: TextField(
+                    controller: _controller,
+                    focusNode: _focusNode,
+                    maxLines: 5,
+                    minLines: 1,
+                    style: TextStyle(fontSize: 15, color: textColor),
+                    decoration: InputDecoration(
+                      hintText: '写下你的想法...',
+                      hintStyle: TextStyle(fontSize: 15, color: hintColor),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Icon(Icons.image_outlined, size: 22, color: mutedColor),
+                    const SizedBox(width: 12),
+                    Icon(Icons.emoji_emotions_outlined, size: 22, color: mutedColor),
+                    const SizedBox(width: 12),
+                    Icon(Icons.alternate_email, size: 22, color: mutedColor),
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: _send,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primary,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.primary.withValues(alpha: 0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: _isSending
+                            ? const SizedBox(
+                                width: 16, height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              )
+                            : const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text('发送',
+                                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
+                                  SizedBox(width: 4),
+                                  Icon(Icons.send, size: 14, color: Colors.white),
+                                ],
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

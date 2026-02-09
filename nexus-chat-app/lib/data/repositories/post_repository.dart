@@ -159,16 +159,28 @@ class PostRepository {
     int postId, {
     int page = 0,
     int size = 20,
+    int? userId,
   }) async {
     return await _apiService.getPostComments(
       postId,
       page: page,
       size: size,
+      userId: userId,
     );
   }
 
   /// 删除评论
   Future<void> deleteComment(int commentId, int userId) async {
     await _apiService.deleteComment(commentId, userId);
+  }
+
+  /// 评论点赞（切换）
+  Future<PostCommentModel> toggleCommentLike(int commentId, int userId) async {
+    return await _apiService.toggleCommentLike(commentId, userId);
+  }
+
+  /// 获取评论的回复列表
+  Future<List<PostCommentModel>> getCommentReplies(int commentId, {int? userId}) async {
+    return await _apiService.getCommentReplies(commentId, userId: userId);
   }
 }

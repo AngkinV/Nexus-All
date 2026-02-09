@@ -187,12 +187,14 @@ class PostApiService {
     int postId, {
     int page = 0,
     int size = 20,
+    int? userId,
   }) async {
     final response = await _dioClient.get(
       '/api/posts/$postId/comments',
       queryParameters: {
         'page': page,
         'size': size,
+        if (userId != null) 'userId': userId,
       },
     );
     return CommentListResponse.fromJson(response.data);
@@ -204,5 +206,27 @@ class PostApiService {
       '/api/posts/comments/$commentId',
       queryParameters: {'userId': userId},
     );
+  }
+
+  /// 评论点赞（切换）
+  Future<PostCommentModel> toggleCommentLike(int commentId, int userId) async {
+    final response = await _dioClient.post(
+      '/api/posts/comments/$commentId/like',
+      queryParameters: {'userId': userId},
+    );
+    return PostCommentModel.fromJson(response.data);
+  }
+
+  /// 获取评论的回复列表
+  Future<List<PostCommentModel>> getCommentReplies(int commentId, {int? userId}) async {
+    final response = await _dioClient.get(
+      '/api/posts/comments/$commentId/replies',
+      queryParameters: {
+        if (userId != null) 'userId': userId,
+      },
+    );
+    return (response.data as List)
+        .map((json) => PostCommentModel.fromJson(json))
+        .toList();
   }
 }

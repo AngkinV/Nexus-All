@@ -28,6 +28,7 @@ public class PostCommentDTO {
 
     // 统计
     private Integer likeCount;
+    private Boolean userLiked;
 
     // 时间
     private LocalDateTime createdAt;

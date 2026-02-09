@@ -24,12 +24,13 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
   int _currentIndex = 0;
   final MessageService _messageService = MessageService();
   final SecureStorageService _secureStorage = SecureStorageService();
+  final ValueNotifier<int> _tabNotifier = ValueNotifier<int>(0);
 
   late final List<Widget> _pages = [
     const MessagesPage(),
     const ContactsPage(),
     const CommunityPage(),
-    ProfilePage(onNavigateToCommunity: _navigateToCommunity),
+    ProfilePage(onNavigateToCommunity: _navigateToCommunity, tabNotifier: _tabNotifier),
   ];
 
   /// 从个人中心跳转到社区Tab
@@ -48,8 +49,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
 
   @override
   void dispose() {
-    // 注意：不要在这里断开 WebSocket，因为用户可能只是切换页面
-    // WebSocket 的断开应该在登出时处理
+    _tabNotifier.dispose();
     super.dispose();
   }
 
@@ -187,6 +187,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
           setState(() {
             _currentIndex = index;
           });
+          _tabNotifier.value = index;
         }
       },
       child: Container(

@@ -150,6 +150,7 @@ class PostCommentModel {
   final String content;
   final int? parentId;
   final int likeCount;
+  final bool userLiked;
   final DateTime createdAt;
 
   PostCommentModel({
@@ -162,6 +163,7 @@ class PostCommentModel {
     required this.content,
     this.parentId,
     required this.likeCount,
+    this.userLiked = false,
     required this.createdAt,
   });
 
@@ -176,6 +178,7 @@ class PostCommentModel {
       content: json['content'] ?? '',
       parentId: json['parentId'],
       likeCount: json['likeCount'] ?? 0,
+      userLiked: json['userLiked'] ?? false,
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'])
           : DateTime.now(),

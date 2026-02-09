@@ -129,19 +129,22 @@ class _BookmarksPageState extends State<BookmarksPage> {
   }
 
   void _navigateToDetail(PostModel post) async {
-    final result = await Navigator.push<PostModel>(
+    final result = await Navigator.push<Map<String, dynamic>>(
       context,
       MaterialPageRoute(builder: (_) => PostDetailPage(post: post)),
     );
     if (result != null) {
-      setState(() {
-        if (!result.isBookmarked) {
-          _bookmarks.removeWhere((p) => p.id == result.id);
-        } else {
-          final index = _bookmarks.indexWhere((p) => p.id == result.id);
-          if (index != -1) _bookmarks[index] = result;
-        }
-      });
+      final updatedPost = result['post'] as PostModel?;
+      if (updatedPost != null) {
+        setState(() {
+          if (!updatedPost.isBookmarked) {
+            _bookmarks.removeWhere((p) => p.id == updatedPost.id);
+          } else {
+            final index = _bookmarks.indexWhere((p) => p.id == updatedPost.id);
+            if (index != -1) _bookmarks[index] = updatedPost;
+          }
+        });
+      }
     }
   }
 

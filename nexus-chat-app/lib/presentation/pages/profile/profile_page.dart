@@ -15,8 +15,9 @@ import '../community/bookmarks_page.dart';
 /// 个人中心页面
 class ProfilePage extends StatefulWidget {
   final VoidCallback? onNavigateToCommunity;
+  final ValueNotifier<int>? tabNotifier;
 
-  const ProfilePage({super.key, this.onNavigateToCommunity});
+  const ProfilePage({super.key, this.onNavigateToCommunity, this.tabNotifier});
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -40,12 +41,26 @@ class _ProfilePageState extends State<ProfilePage> {
     super.initState();
     _loadCurrentUser();
     _setupUserListener();
+    widget.tabNotifier?.addListener(_onTabChanged);
   }
 
   @override
   void dispose() {
+    widget.tabNotifier?.removeListener(_onTabChanged);
     _userSubscription?.cancel();
     super.dispose();
+  }
+
+  void _onTabChanged() {
+    // 当"我"标签页被选中时（index == 3），刷新统计数据
+    if (widget.tabNotifier?.value == 3) {
+      _loadUserStats();
+    }
+  }
+
+  /// 公开方法：供外部调用刷新统计数据
+  void refreshStats() {
+    _loadUserStats();
   }
 
   void _setupUserListener() {
