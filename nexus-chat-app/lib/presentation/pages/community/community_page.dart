@@ -1,13 +1,14 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../../core/config/api_config.dart';
 import '../../../core/config/theme_config.dart';
 import '../../../core/storage/secure_storage.dart';
 import '../../../data/models/post/post_models.dart';
 import '../../../data/repositories/post_repository.dart';
 import 'create_post_page.dart';
 
-/// 社区页面
+/// 社区页面 - 书卷风格
 class CommunityPage extends StatefulWidget {
   const CommunityPage({super.key});
 
@@ -88,7 +89,6 @@ class _CommunityPageState extends State<CommunityPage> {
         _recommendedHasMore = !response.last;
         _isLoading = false;
       });
-      // 预加载新帖子的图片
       _precachePostImages(response.content);
     } catch (e) {
       setState(() => _isLoading = false);
@@ -118,7 +118,6 @@ class _CommunityPageState extends State<CommunityPage> {
         _hotHasMore = !response.last;
         _isLoading = false;
       });
-      // 预加载新帖子的图片
       _precachePostImages(response.content);
     } catch (e) {
       setState(() => _isLoading = false);
@@ -148,7 +147,6 @@ class _CommunityPageState extends State<CommunityPage> {
         _latestHasMore = !response.last;
         _isLoading = false;
       });
-      // 预加载新帖子的图片
       _precachePostImages(response.content);
     } catch (e) {
       setState(() => _isLoading = false);
@@ -199,8 +197,6 @@ class _CommunityPageState extends State<CommunityPage> {
     }
   }
 
-  /// 预加载帖子图片
-  /// 当帖子加载完成后，预加载前几个帖子的图片到缓存中
   void _precachePostImages(List<PostModel> posts, {int count = 5}) {
     final postsToPreload = posts.take(count);
     for (final post in postsToPreload) {
@@ -209,9 +205,7 @@ class _CommunityPageState extends State<CommunityPage> {
           precacheImage(
             CachedNetworkImageProvider(imageUrl),
             context,
-          ).catchError((_) {
-            // 预加载失败时静默处理
-          });
+          ).catchError((_) {});
         }
       }
     }
@@ -308,12 +302,15 @@ class _CommunityPageState extends State<CommunityPage> {
     }
   }
 
+  // ==================== UI ====================
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? const Color(0xFF1C1C1E) : const Color(0xFFF7F5F0);
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF111111) : const Color(0xFFF8F9FA),
+      backgroundColor: bgColor,
       body: Stack(
         children: [
           Column(
@@ -324,70 +321,96 @@ class _CommunityPageState extends State<CommunityPage> {
               ),
             ],
           ),
-          // 悬浮发帖按钮
+          // FAB
           Positioned(
-            right: 16,
-            bottom: 100,
-            child: _buildCreatePostButton(isDark),
+            right: 20,
+            bottom: 24,
+            child: _buildFAB(isDark),
           ),
         ],
       ),
     );
   }
 
+  /// 头部 - 标题 + 搜索 + 标签导航
   Widget _buildHeader(BuildContext context, bool isDark) {
+    final surfaceColor = isDark
+        ? const Color(0xFF1C1C1E).withValues(alpha: 0.95)
+        : const Color(0xFFF7F5F0).withValues(alpha: 0.95);
+
     return ClipRect(
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: Container(
           decoration: BoxDecoration(
-            color: isDark
-                ? Colors.black.withValues(alpha: 0.8)
-                : Colors.white.withValues(alpha: 0.8),
+            color: surfaceColor,
             border: Border(
               bottom: BorderSide(
-                color: isDark ? Colors.grey[800]! : Colors.grey[100]!,
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.05)
+                    : Colors.black.withValues(alpha: 0.05),
               ),
             ),
           ),
           child: SafeArea(
             bottom: false,
-            child: Column(
-              children: [
-                // 标题栏
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
-                  child: Row(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+              child: Column(
+                children: [
+                  // 标题行 + 搜索框
+                  Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
                         '社区',
                         style: TextStyle(
                           fontSize: 30,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w900,
                           letterSpacing: -0.5,
-                          color: isDark ? Colors.white : const Color(0xFF1A1C1E),
+                          color: isDark ? Colors.white : const Color(0xFF1F2937),
                         ),
                       ),
-                      IconButton(
-                        onPressed: () {
-                          // TODO: 搜索
-                        },
-                        icon: Icon(
-                          Icons.search,
-                          size: 28,
-                          color: isDark ? Colors.white : Colors.grey[800],
+                      // 搜索框
+                      Container(
+                        width: 160,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.1)
+                              : Colors.black.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: Row(
+                          children: [
+                            const SizedBox(width: 12),
+                            Icon(
+                              Icons.search,
+                              size: 18,
+                              color: isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              '搜索话题...',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
-                ),
-                // 标签导航
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
-                  child: _buildTabBar(isDark),
-                ),
-              ],
+
+                  const SizedBox(height: 20),
+
+                  // 标签导航 - 文字风格
+                  _buildTabNav(isDark),
+
+                  const SizedBox(height: 12),
+                ],
+              ),
             ),
           ),
         ),
@@ -395,48 +418,51 @@ class _CommunityPageState extends State<CommunityPage> {
     );
   }
 
-  Widget _buildTabBar(bool isDark) {
+  /// 标签导航 - 书卷风格文字导航
+  Widget _buildTabNav(bool isDark) {
     final tabs = ['推荐', '热门', '最新'];
+    final mutedColor = isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280);
 
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: isDark ? Colors.grey[800]?.withValues(alpha: 0.5) : Colors.grey[100]?.withValues(alpha: 0.8),
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: List.generate(tabs.length, (index) {
-          final isSelected = _currentTabIndex == index;
-          return GestureDetector(
+    return Row(
+      children: List.generate(tabs.length, (index) {
+        final isSelected = _currentTabIndex == index;
+        return Padding(
+          padding: EdgeInsets.only(right: index < tabs.length - 1 ? 32 : 0),
+          child: GestureDetector(
             onTap: () => _onTabChanged(index),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-              decoration: BoxDecoration(
-                color: isSelected ? AppTheme.primary : Colors.transparent,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                tabs[index],
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                  color: isSelected
-                      ? Colors.black
-                      : (isDark ? Colors.grey[500] : Colors.grey[500]),
+            child: Column(
+              children: [
+                Text(
+                  tabs[index],
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    color: isSelected ? AppTheme.primary : mutedColor,
+                  ),
                 ),
-              ),
+                const SizedBox(height: 6),
+                // 圆点指示器
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: 5,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isSelected ? AppTheme.primary : Colors.transparent,
+                  ),
+                ),
+              ],
             ),
-          );
-        }),
-      ),
+          ),
+        );
+      }),
     );
   }
 
+  /// 帖子列表
   Widget _buildPostList(List<PostModel> posts, bool hasMore, bool isDark) {
     if (_isLoading && posts.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: CircularProgressIndicator(color: AppTheme.primary));
     }
 
     if (posts.isEmpty) {
@@ -474,13 +500,13 @@ class _CommunityPageState extends State<CommunityPage> {
           return false;
         },
         child: ListView.builder(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
           itemCount: posts.length + (hasMore ? 1 : 0),
           itemBuilder: (context, index) {
             if (index == posts.length) {
               return const Padding(
                 padding: EdgeInsets.all(16),
-                child: Center(child: CircularProgressIndicator()),
+                child: Center(child: CircularProgressIndicator(color: AppTheme.primary)),
               );
             }
             return _buildPostCard(posts[index], isDark);
@@ -490,56 +516,98 @@ class _CommunityPageState extends State<CommunityPage> {
     );
   }
 
+  /// 帖子卡片 - 书卷纸面风格
   Widget _buildPostCard(PostModel post, bool isDark) {
+    final surfaceColor = isDark ? const Color(0xFF2C2C2E) : Colors.white;
+    final borderColor = isDark
+        ? Colors.white.withValues(alpha: 0.05)
+        : Colors.black.withValues(alpha: 0.05);
+    final inkColor = isDark ? Colors.white : const Color(0xFF1F2937);
+    final mutedColor = isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280);
+    final dividerColor = isDark
+        ? Colors.white.withValues(alpha: 0.05)
+        : const Color(0xFFF3F4F6);
+    final chipBg = isDark
+        ? Colors.white.withValues(alpha: 0.05)
+        : const Color(0xFFF9FAFB);
+
+    final fullAvatarUrl = post.authorAvatarUrl != null
+        ? ApiConfig.getFullUrl(post.authorAvatarUrl)
+        : '';
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+        color: surfaceColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? Colors.grey[800]! : Colors.grey[50]!,
-        ),
+        border: Border.all(color: borderColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: Colors.black.withValues(alpha: isDark ? 0.0 : 0.04),
             blurRadius: 20,
             offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
         children: [
-          // 作者信息
+          // 右上角装饰
+          Positioned(
+            top: -16,
+            right: -16,
+            child: Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [
+                    AppTheme.primary.withValues(alpha: 0.06),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // 主内容
           Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // 作者信息
                 Row(
                   children: [
-                    // 头像
+                    // 头像 - 40px
                     Container(
-                      width: 32,
-                      height: 32,
+                      width: 40,
+                      height: 40,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        border: Border.all(
-                          color: isDark ? Colors.grey[700]! : Colors.grey[100]!,
-                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
                       child: ClipOval(
-                        child: post.authorAvatarUrl != null
+                        child: fullAvatarUrl.isNotEmpty
                             ? CachedNetworkImage(
-                                imageUrl: post.authorAvatarUrl!,
+                                imageUrl: fullAvatarUrl,
                                 fit: BoxFit.cover,
-                                placeholder: (context, url) => _buildDefaultAvatar(post.displayName),
-                                errorWidget: (context, url, error) => _buildDefaultAvatar(post.displayName),
+                                placeholder: (context, url) =>
+                                    _buildGradientAvatar(post.displayName),
+                                errorWidget: (context, url, error) =>
+                                    _buildGradientAvatar(post.displayName),
                               )
-                            : _buildDefaultAvatar(post.displayName),
+                            : _buildGradientAvatar(post.displayName),
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -547,28 +615,41 @@ class _CommunityPageState extends State<CommunityPage> {
                           Text(
                             post.displayName,
                             style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? Colors.white : Colors.grey[800],
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: inkColor,
                             ),
                           ),
-                          Text(
-                            '${_formatTime(post.createdAt)} · 社区频道',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.grey[400],
-                            ),
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              Text(
+                                _formatTime(post.createdAt),
+                                style: TextStyle(fontSize: 12, color: mutedColor),
+                              ),
+                              Container(
+                                width: 3,
+                                height: 3,
+                                margin: const EdgeInsets.symmetric(horizontal: 6),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: mutedColor.withValues(alpha: 0.5),
+                                ),
+                              ),
+                              Text(
+                                '社区频道',
+                                style: TextStyle(fontSize: 12, color: mutedColor),
+                              ),
+                            ],
                           ),
                         ],
                       ),
                     ),
                     GestureDetector(
-                      onTap: () {
-                        // TODO: 更多操作
-                      },
+                      onTap: () {},
                       child: Icon(
                         Icons.more_horiz,
-                        color: Colors.grey[400],
+                        color: mutedColor,
                         size: 20,
                       ),
                     ),
@@ -582,31 +663,170 @@ class _CommunityPageState extends State<CommunityPage> {
                     post.title!,
                     style: TextStyle(
                       fontSize: 20,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w700,
                       height: 1.3,
-                      color: isDark ? Colors.white : const Color(0xFF1A1C1E),
+                      color: inkColor,
                     ),
                   ),
                 ],
 
                 // 内容
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 RichText(
-                  maxLines: 2,
+                  maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                   text: TextSpan(
                     style: TextStyle(
                       fontSize: 15,
-                      height: 1.6,
-                      color: isDark ? Colors.grey[400] : Colors.grey[600],
+                      height: 1.7,
+                      color: inkColor.withValues(alpha: 0.8),
                     ),
                     children: [
                       TextSpan(text: post.content),
                       TextSpan(
-                        text: ' 阅读更多',
+                        text: '  阅读更多',
                         style: TextStyle(
                           color: AppTheme.primary,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // 图片
+                if (post.images.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  _buildImages(post.images, isDark),
+                ],
+
+                // 操作栏
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.only(top: 14),
+                  decoration: BoxDecoration(
+                    border: Border(top: BorderSide(color: dividerColor)),
+                  ),
+                  child: Row(
+                    children: [
+                      // 投票按钮组
+                      Container(
+                        decoration: BoxDecoration(
+                          color: chipBg,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          children: [
+                            GestureDetector(
+                              onTap: () => _handleVote(post, 1),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 6),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.arrow_upward,
+                                      size: 18,
+                                      color: post.userVote == 1
+                                          ? AppTheme.primary
+                                          : mutedColor,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      _formatCount(post.upvoteCount),
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                        color: post.userVote == 1
+                                            ? AppTheme.primary
+                                            : mutedColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            Container(
+                              width: 1,
+                              height: 14,
+                              color: isDark
+                                  ? Colors.white.withValues(alpha: 0.1)
+                                  : const Color(0xFFD1D5DB),
+                            ),
+                            GestureDetector(
+                              onTap: () => _handleVote(post, -1),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 6),
+                                child: Icon(
+                                  Icons.arrow_downward,
+                                  size: 18,
+                                  color: post.userVote == -1
+                                      ? Colors.red
+                                      : mutedColor,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(width: 16),
+
+                      // 评论
+                      GestureDetector(
+                        onTap: () {},
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.chat_bubble_outline,
+                              size: 18,
+                              color: mutedColor,
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              _formatCount(post.commentCount),
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: mutedColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const Spacer(),
+
+                      // 分享
+                      GestureDetector(
+                        onTap: () {},
+                        child: Padding(
+                          padding: const EdgeInsets.all(6),
+                          child: Icon(
+                            Icons.share_outlined,
+                            size: 18,
+                            color: mutedColor,
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(width: 12),
+
+                      // 收藏
+                      GestureDetector(
+                        onTap: () => _handleBookmark(post),
+                        child: Padding(
+                          padding: const EdgeInsets.all(6),
+                          child: Icon(
+                            post.isBookmarked
+                                ? Icons.bookmark
+                                : Icons.bookmark_border,
+                            size: 18,
+                            color: post.isBookmarked
+                                ? AppTheme.primary
+                                : mutedColor,
+                          ),
                         ),
                       ),
                     ],
@@ -615,210 +835,75 @@ class _CommunityPageState extends State<CommunityPage> {
               ],
             ),
           ),
-
-          // 图片
-          if (post.images.isNotEmpty) _buildImages(post.images, isDark),
-
-          // 操作栏
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-            child: Container(
-              padding: const EdgeInsets.only(top: 16),
-              decoration: BoxDecoration(
-                border: Border(
-                  top: BorderSide(
-                    color: isDark ? Colors.grey[800]! : Colors.grey[50]!,
-                  ),
-                ),
-              ),
-              child: Row(
-                children: [
-                  // 投票按钮组
-                  Container(
-                    decoration: BoxDecoration(
-                      color: isDark ? Colors.grey[800]?.withValues(alpha: 0.5) : Colors.grey[50],
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    child: Row(
-                      children: [
-                        // 点赞
-                        GestureDetector(
-                          onTap: () => _handleVote(post, 1),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.arrow_upward,
-                                  size: 20,
-                                  color: post.userVote == 1
-                                      ? AppTheme.primary
-                                      : Colors.grey[400],
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  _formatCount(post.upvoteCount),
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                    color: post.userVote == 1
-                                        ? AppTheme.primary
-                                        : (isDark ? Colors.grey[300] : Colors.grey[700]),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        // 分隔线
-                        Container(
-                          width: 1,
-                          height: 16,
-                          color: isDark ? Colors.grey[700] : Colors.grey[200],
-                        ),
-                        // 踩
-                        GestureDetector(
-                          onTap: () => _handleVote(post, -1),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            child: Icon(
-                              Icons.arrow_downward,
-                              size: 20,
-                              color: post.userVote == -1
-                                  ? Colors.red
-                                  : Colors.grey[400],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(width: 8),
-
-                  // 评论
-                  GestureDetector(
-                    onTap: () {
-                      // TODO: 打开评论
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.chat_bubble_outline,
-                            size: 20,
-                            color: Colors.grey[400],
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            _formatCount(post.commentCount),
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? Colors.grey[300] : Colors.grey[700],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  const Spacer(),
-
-                  // 分享
-                  GestureDetector(
-                    onTap: () {
-                      // TODO: 分享
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(10),
-                      child: Icon(
-                        Icons.share_outlined,
-                        size: 22,
-                        color: Colors.grey[400],
-                      ),
-                    ),
-                  ),
-
-                  // 收藏
-                  GestureDetector(
-                    onTap: () => _handleBookmark(post),
-                    child: Container(
-                      padding: const EdgeInsets.all(10),
-                      child: Icon(
-                        post.isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-                        size: 22,
-                        color: post.isBookmarked ? Colors.orange : Colors.grey[400],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildDefaultAvatar(String name) {
+  /// 渐变头像 - 翡翠色渐变底色
+  Widget _buildGradientAvatar(String name) {
     return Container(
-      color: AppTheme.primary,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+          colors: [AppTheme.primary, Color(0xFF059669)],
+        ),
+      ),
       child: Center(
         child: Text(
           name.isNotEmpty ? name[0].toUpperCase() : '?',
           style: const TextStyle(
             color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            fontSize: 16,
           ),
         ),
       ),
     );
   }
 
+  /// 图片区域
   Widget _buildImages(List<String> images, bool isDark) {
     if (images.isEmpty) return const SizedBox.shrink();
 
-    // 单图
+    final placeholderColor = isDark ? const Color(0xFF3A3A3C) : const Color(0xFFF3F4F6);
+
+    // 单图 - 圆角卡片
     if (images.length == 1) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: CachedNetworkImage(
-            imageUrl: images[0],
-            width: double.infinity,
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: CachedNetworkImage(
+          imageUrl: images[0],
+          width: double.infinity,
+          height: 200,
+          fit: BoxFit.cover,
+          placeholder: (context, url) => Container(
             height: 200,
-            fit: BoxFit.cover,
-            placeholder: (context, url) => Container(
-              height: 200,
-              color: isDark ? Colors.grey[800] : Colors.grey[200],
-              child: const Center(
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
+            color: placeholderColor,
+            child: const Center(
+              child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primary),
             ),
-            errorWidget: (context, url, error) => Container(
-              height: 200,
-              color: isDark ? Colors.grey[800] : Colors.grey[300],
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.image_not_supported,
-                    color: isDark ? Colors.grey[600] : Colors.grey[400],
+          ),
+          errorWidget: (context, url, error) => Container(
+            height: 200,
+            color: placeholderColor,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.image_not_supported,
+                  color: isDark ? Colors.grey[600] : Colors.grey[400],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '图片加载失败',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? Colors.grey[600] : Colors.grey[500],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '图片加载失败',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isDark ? Colors.grey[600] : Colors.grey[500],
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
@@ -830,7 +915,6 @@ class _CommunityPageState extends State<CommunityPage> {
       height: 180,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
         itemCount: images.length,
         itemBuilder: (context, index) {
           return Container(
@@ -842,13 +926,13 @@ class _CommunityPageState extends State<CommunityPage> {
                 imageUrl: images[index],
                 fit: BoxFit.cover,
                 placeholder: (context, url) => Container(
-                  color: isDark ? Colors.grey[800] : Colors.grey[200],
+                  color: placeholderColor,
                   child: const Center(
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primary),
                   ),
                 ),
                 errorWidget: (context, url, error) => Container(
-                  color: isDark ? Colors.grey[800] : Colors.grey[300],
+                  color: placeholderColor,
                   child: Icon(
                     Icons.image_not_supported,
                     color: isDark ? Colors.grey[600] : Colors.grey[400],
@@ -862,47 +946,34 @@ class _CommunityPageState extends State<CommunityPage> {
     );
   }
 
-  Widget _buildCreatePostButton(bool isDark) {
+  /// 悬浮按钮 - 圆形
+  Widget _buildFAB(bool isDark) {
     return GestureDetector(
       onTap: _navigateToCreatePost,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        width: 56,
+        height: 56,
         decoration: BoxDecoration(
-          color: AppTheme.primary.withValues(alpha: 0.9),
-          borderRadius: BorderRadius.circular(28),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.2),
-          ),
+          shape: BoxShape.circle,
+          color: AppTheme.primary,
           boxShadow: [
             BoxShadow(
-              color: AppTheme.primary.withValues(alpha: 0.2),
-              blurRadius: 20,
-              offset: const Offset(0, 4),
+              color: AppTheme.primary.withValues(alpha: 0.3),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.edit,
-              size: 24,
-              color: Colors.black,
-            ),
-            const SizedBox(width: 8),
-            const Text(
-              '发帖',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
-            ),
-          ],
+        child: const Icon(
+          Icons.edit,
+          size: 24,
+          color: Colors.white,
         ),
       ),
     );
   }
+
+  // ==================== 工具方法 ====================
 
   String _formatTime(DateTime dateTime) {
     final now = DateTime.now();
