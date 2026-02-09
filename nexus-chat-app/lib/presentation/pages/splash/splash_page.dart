@@ -243,19 +243,20 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Logo 图标容器
+          // Logo 图片
           Container(
             width: 112,
             height: 112,
             decoration: BoxDecoration(
-              gradient: AppTheme.primaryGradient,
               borderRadius: BorderRadius.circular(28),
               boxShadow: AppTheme.primaryShadow,
             ),
-            child: const Icon(
-              Icons.hub,
-              size: 56,
-              color: Colors.white,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(28),
+              child: Image.asset(
+                'assets/icon/app_icon.jpg',
+                fit: BoxFit.cover,
+              ),
             ),
           ),
 
