@@ -7,6 +7,7 @@ import '../../../core/storage/secure_storage.dart';
 import '../../../data/models/post/post_models.dart';
 import '../../../data/repositories/post_repository.dart';
 import 'create_post_page.dart';
+import 'post_detail_page.dart';
 
 /// 社区页面 - 书卷风格
 class CommunityPage extends StatefulWidget {
@@ -420,6 +421,16 @@ class _CommunityPageState extends State<CommunityPage> {
     }
   }
 
+  void _navigateToDetail(PostModel post) async {
+    final result = await Navigator.push<PostModel>(
+      context,
+      MaterialPageRoute(builder: (_) => PostDetailPage(post: post)),
+    );
+    if (result != null) {
+      _updatePostInLists(result);
+    }
+  }
+
   void _onTabChanged(int index) {
     setState(() {
       _currentTabIndex = index;
@@ -686,7 +697,9 @@ class _CommunityPageState extends State<CommunityPage> {
         ? ApiConfig.getFullUrl(post.authorAvatarUrl)
         : '';
 
-    return Container(
+    return GestureDetector(
+      onTap: () => _navigateToDetail(post),
+      child: Container(
       margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
         color: surfaceColor,
@@ -987,6 +1000,7 @@ class _CommunityPageState extends State<CommunityPage> {
             ),
           ),
         ],
+      ),
       ),
     );
   }

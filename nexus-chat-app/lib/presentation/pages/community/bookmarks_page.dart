@@ -6,6 +6,7 @@ import '../../../core/config/theme_config.dart';
 import '../../../core/storage/secure_storage.dart';
 import '../../../data/models/post/post_models.dart';
 import '../../../data/repositories/post_repository.dart';
+import 'post_detail_page.dart';
 
 /// 我的收藏页面
 class BookmarksPage extends StatefulWidget {
@@ -127,6 +128,23 @@ class _BookmarksPageState extends State<BookmarksPage> {
     }
   }
 
+  void _navigateToDetail(PostModel post) async {
+    final result = await Navigator.push<PostModel>(
+      context,
+      MaterialPageRoute(builder: (_) => PostDetailPage(post: post)),
+    );
+    if (result != null) {
+      setState(() {
+        if (!result.isBookmarked) {
+          _bookmarks.removeWhere((p) => p.id == result.id);
+        } else {
+          final index = _bookmarks.indexWhere((p) => p.id == result.id);
+          if (index != -1) _bookmarks[index] = result;
+        }
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -241,7 +259,9 @@ class _BookmarksPageState extends State<BookmarksPage> {
         ? ApiConfig.getFullUrl(post.authorAvatarUrl)
         : '';
 
-    return Container(
+    return GestureDetector(
+      onTap: () => _navigateToDetail(post),
+      child: Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: surfaceColor,
@@ -462,6 +482,7 @@ class _BookmarksPageState extends State<BookmarksPage> {
             ),
           ],
         ),
+      ),
       ),
     );
   }
