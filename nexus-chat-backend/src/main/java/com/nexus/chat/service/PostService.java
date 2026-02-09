@@ -83,7 +83,7 @@ public class PostService {
     }
 
     /**
-     * 删除帖子
+     * 删除帖子（级联删除关联的投票、收藏、评论）
      */
     @Transactional
     public void deletePost(Long postId, Long userId) {
@@ -93,6 +93,11 @@ public class PostService {
         if (!post.getAuthor().getId().equals(userId)) {
             throw new RuntimeException("无权删除此帖子");
         }
+
+        // 先删除关联数据，避免外键约束冲突
+        postVoteRepository.deleteByPostId(postId);
+        postBookmarkRepository.deleteByPostId(postId);
+        postCommentRepository.deleteByPostId(postId);
 
         postRepository.delete(post);
     }

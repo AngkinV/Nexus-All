@@ -28,4 +28,7 @@ public interface PostBookmarkRepository extends JpaRepository<PostBookmark, Long
 
     // 统计帖子收藏数
     long countByPostId(Long postId);
+
+    // 删除帖子的所有收藏
+    void deleteByPostId(Long postId);
 }

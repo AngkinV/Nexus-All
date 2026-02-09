@@ -23,4 +23,7 @@ public interface PostVoteRepository extends JpaRepository<PostVote, Long> {
 
     // 统计帖子点赞数
     long countByPostIdAndVoteType(Long postId, Integer voteType);
+
+    // 删除帖子的所有投票
+    void deleteByPostId(Long postId);
 }

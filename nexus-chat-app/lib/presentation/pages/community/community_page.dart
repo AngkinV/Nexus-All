@@ -259,6 +259,157 @@ class _CommunityPageState extends State<CommunityPage> {
     }
   }
 
+  void _removePostFromLists(int postId) {
+    setState(() {
+      _recommendedPosts.removeWhere((p) => p.id == postId);
+      _hotPosts.removeWhere((p) => p.id == postId);
+      _latestPosts.removeWhere((p) => p.id == postId);
+    });
+  }
+
+  /// 显示帖子更多操作菜单
+  void _showPostMenu(PostModel post, bool isDark) {
+    final isAuthor = post.authorId == _currentUserId;
+    final mutedColor = isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280);
+    final surfaceColor = isDark ? const Color(0xFF2C2C2E) : Colors.white;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: BoxDecoration(
+          color: surfaceColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 拖拽指示条
+              Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(top: 12, bottom: 8),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.grey[700] : Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+
+              // 举报
+              ListTile(
+                leading: Icon(Icons.flag_outlined, color: mutedColor),
+                title: Text('举报', style: TextStyle(
+                  fontSize: 15, color: isDark ? Colors.white : const Color(0xFF1F2937),
+                )),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('感谢反馈，我们会尽快处理'), duration: Duration(seconds: 2)),
+                  );
+                },
+              ),
+
+              // 删除（仅作者可见）
+              if (isAuthor) ...[
+                Divider(height: 1, color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[200]),
+                ListTile(
+                  leading: const Icon(Icons.delete_outline, color: Colors.red),
+                  title: const Text('删除', style: TextStyle(
+                    fontSize: 15, color: Colors.red, fontWeight: FontWeight.w500,
+                  )),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _confirmDelete(post, isDark);
+                  },
+                ),
+              ],
+
+              const SizedBox(height: 8),
+
+              // 取消
+              Divider(height: 1, color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[200]),
+              ListTile(
+                title: Text(
+                  '取消',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: mutedColor,
+                  ),
+                ),
+                onTap: () => Navigator.pop(ctx),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 确认删除对话框
+  void _confirmDelete(PostModel post, bool isDark) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF2C2C2E) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          '确认删除',
+          style: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w700,
+            color: isDark ? Colors.white : const Color(0xFF1F2937),
+          ),
+        ),
+        content: Text(
+          '确定要删除这条帖子吗？删除后无法恢复。',
+          style: TextStyle(
+            fontSize: 14,
+            color: isDark ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              '取消',
+              style: TextStyle(
+                color: isDark ? Colors.grey[400] : Colors.grey[600],
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _handleDelete(post);
+            },
+            child: const Text(
+              '删除',
+              style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 执行删除
+  Future<void> _handleDelete(PostModel post) async {
+    if (_currentUserId == null) return;
+    try {
+      await _postRepository.deletePost(post.id, _currentUserId!);
+      _removePostFromLists(post.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('已删除'), duration: Duration(seconds: 1)),
+        );
+      }
+    } catch (e) {
+      _showError('删除失败');
+    }
+  }
+
   void _navigateToCreatePost() async {
     final result = await Navigator.push(
       context,
@@ -646,7 +797,7 @@ class _CommunityPageState extends State<CommunityPage> {
                       ),
                     ),
                     GestureDetector(
-                      onTap: () {},
+                      onTap: () => _showPostMenu(post, isDark),
                       child: Icon(
                         Icons.more_horiz,
                         color: mutedColor,

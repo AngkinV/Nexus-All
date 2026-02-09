@@ -28,4 +28,7 @@ public interface PostCommentRepository extends JpaRepository<PostComment, Long> 
 
     // 统计用户评论数
     long countByAuthorId(Long authorId);
+
+    // 删除帖子的所有评论
+    void deleteByPostId(Long postId);
 }

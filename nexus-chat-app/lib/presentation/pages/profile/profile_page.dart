@@ -10,6 +10,7 @@ import '../../../data/models/auth/auth_models.dart';
 import 'settings_page.dart';
 import 'profile_edit_page.dart';
 import '../../../data/datasources/remote/user_api_service.dart';
+import '../community/bookmarks_page.dart';
 
 /// 个人中心页面
 class ProfilePage extends StatefulWidget {
@@ -558,7 +559,12 @@ class _ProfilePageState extends State<ProfilePage> {
           // 已收藏卡片 - 深色风格
           Expanded(
             child: GestureDetector(
-              onTap: () {},
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const BookmarksPage()),
+                );
+              },
               child: Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
