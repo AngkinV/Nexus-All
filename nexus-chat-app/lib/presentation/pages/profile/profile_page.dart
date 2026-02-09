@@ -39,7 +39,6 @@ class _ProfilePageState extends State<ProfilePage> {
     super.dispose();
   }
 
-  /// 监听用户状态变化
   void _setupUserListener() {
     _userSubscription = _userStateManager.userStream.listen((user) {
       if (mounted && user != null) {
@@ -60,206 +59,692 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  void _navigateToEditProfile() async {
+    if (_currentUser == null) return;
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ProfileEditPage(user: _currentUser!),
+      ),
+    );
+    if (result == true) {
+      _loadCurrentUser();
+    }
+  }
+
+  void _navigateToSettings() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const SettingsPage(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = isDark ? const Color(0xFF0A0A0A) : const Color(0xFFF7F7F7);
+    final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8F9FA);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
       child: Scaffold(
-        backgroundColor: backgroundColor,
+        backgroundColor: bgColor,
         body: _isLoading
             ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
-            : ListView(
-                padding: EdgeInsets.zero,
+            : Stack(
                 children: [
-                  // 用户信息头部
-                  _buildUserHeader(isDark),
-
-                  const SizedBox(height: 8),
-
-                  // 服务入口
-                  _buildMenuSection(
-                    isDark: isDark,
-                    items: [
-                      _MenuItemData(
-                        icon: Icons.account_balance_wallet,
-                        iconColor: const Color(0xFF10B981),
-                        title: '服务',
-                        onTap: () {},
+                  // 背景光晕
+                  Positioned(
+                    top: 80,
+                    left: -40,
+                    child: Container(
+                      width: 200,
+                      height: 200,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppTheme.primary.withValues(alpha: 0.08),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 120,
+                    right: -40,
+                    child: Container(
+                      width: 200,
+                      height: 200,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: const Color(0xFF10B981).withValues(alpha: 0.06),
+                      ),
+                    ),
+                  ),
+                  // 主内容
+                  ListView(
+                    padding: EdgeInsets.zero,
+                    children: [
+                      SafeArea(
+                        bottom: false,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: Column(
+                            children: [
+                              const SizedBox(height: 24),
+                              _buildUserHeader(isDark),
+                              const SizedBox(height: 32),
+                              _buildStatsSection(isDark),
+                              const SizedBox(height: 28),
+                              _buildFeatureCards(isDark),
+                              const SizedBox(height: 16),
+                              _buildCommunityBanner(isDark),
+                              const SizedBox(height: 16),
+                              _buildSettingsRow(isDark),
+                              const SizedBox(height: 120),
+                            ],
+                          ),
+                        ),
                       ),
                     ],
                   ),
-
-                  const SizedBox(height: 8),
-
-                  // 功能菜单组
-                  _buildMenuSection(
-                    isDark: isDark,
-                    items: [
-                      _MenuItemData(
-                        icon: Icons.bookmark,
-                        iconColor: const Color(0xFFF97316),
-                        title: '收藏',
-                        onTap: () {},
-                      ),
-                      _MenuItemData(
-                        icon: Icons.public,
-                        iconColor: const Color(0xFF3B82F6),
-                        title: '社区',
-                        onTap: () {},
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  // 设置入口
-                  _buildMenuSection(
-                    isDark: isDark,
-                    items: [
-                      _MenuItemData(
-                        icon: Icons.settings,
-                        iconColor: AppTheme.primary,
-                        title: '设置',
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const SettingsPage(),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-
-                  // 底部留白
-                  const SizedBox(height: 100),
                 ],
               ),
       ),
     );
   }
 
-  /// 构建用户信息头部
+  /// 用户头部信息区 - 居中布局
   Widget _buildUserHeader(bool isDark) {
     final user = _currentUser;
     final displayName = user?.displayName ?? '未登录';
     final fullAvatarUrl = ApiConfig.getFullUrl(user?.avatarUrl);
     final nexusId = user?.username ?? 'Nexus_${user?.id ?? '000000'}';
 
-    return Container(
-      color: isDark ? const Color(0xFF18181B) : Colors.white,
-      child: SafeArea(
-        bottom: false,
-        child: InkWell(
-          onTap: () async {
-            // 跳转到个人资料编辑页
-            final result = await Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ProfileEditPage(user: _currentUser!),
+    return Column(
+      children: [
+        // 头像
+        GestureDetector(
+          onTap: _navigateToEditProfile,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // 光晕效果
+              Container(
+                width: 140,
+                height: 140,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppTheme.primary.withValues(alpha: 0.08),
+                ),
               ),
-            );
-            // 如果返回了更新的用户数据，刷新页面
-            if (result == true) {
-              _loadCurrentUser();
-            }
-          },
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 32, 16, 32),
-            child: Row(
-              children: [
-                // 头像
-                Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+              // 头像外圈
+              Container(
+                width: 128,
+                height: 128,
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    begin: Alignment.topRight,
+                    end: Alignment.bottomLeft,
+                    colors: isDark
+                        ? [const Color(0xFF374151), const Color(0xFF1F2937)]
+                        : [const Color(0xFFE5E7EB), Colors.white],
                   ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(14),
-                    child: fullAvatarUrl.isNotEmpty
-                        ? CachedNetworkImage(
-                            imageUrl: fullAvatarUrl,
-                            fit: BoxFit.cover,
-                            placeholder: (context, url) => _buildDefaultAvatar(displayName, isDark),
-                            errorWidget: (context, url, error) => _buildDefaultAvatar(displayName, isDark),
-                          )
-                        : _buildDefaultAvatar(displayName, isDark),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.08),
+                      blurRadius: 24,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: ClipOval(
+                  child: fullAvatarUrl.isNotEmpty
+                      ? CachedNetworkImage(
+                          imageUrl: fullAvatarUrl,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => _buildDefaultAvatar(displayName, isDark),
+                          errorWidget: (context, url, error) => _buildDefaultAvatar(displayName, isDark),
+                        )
+                      : _buildDefaultAvatar(displayName, isDark),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 20),
+
+        // 用户名
+        Text(
+          displayName,
+          style: TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
+            letterSpacing: -0.5,
+          ),
+        ),
+
+        const SizedBox(height: 6),
+
+        // Nexus ID
+        Text(
+          'NEXUS ID: ${nexusId.toUpperCase()}',
+          style: TextStyle(
+            fontSize: 13,
+            color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+            letterSpacing: 2.0,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+
+        const SizedBox(height: 20),
+
+        // 操作按钮
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // 编辑资料按钮
+            GestureDetector(
+              onTap: _navigateToEditProfile,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: (isDark ? Colors.white : const Color(0xFF0F172A)).withValues(alpha: 0.2),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  '编辑资料',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? const Color(0xFF0F172A) : Colors.white,
                   ),
                 ),
+              ),
+            ),
 
-                const SizedBox(width: 20),
+            const SizedBox(width: 12),
 
-                // 用户信息
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // 名称
-                      Text(
-                        displayName,
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : const Color(0xFF18181B),
-                          letterSpacing: -0.5,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      // Nexus ID
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              'Nexus号：$nexusId',
-                              style: TextStyle(
-                                fontSize: 15,
-                                color: isDark ? Colors.grey[400] : Colors.grey[500],
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+            // 二维码按钮
+            GestureDetector(
+              onTap: () {},
+              child: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                    width: 1.5,
                   ),
                 ),
-
-                // 二维码图标
-                Icon(
+                child: Icon(
                   Icons.qr_code_2,
                   size: 20,
-                  color: isDark ? Colors.grey[500] : Colors.grey[400],
+                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                 ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 
-                const SizedBox(width: 8),
+  /// 统计数据区 - 三栏卡片
+  Widget _buildStatsSection(bool isDark) {
+    final surfaceColor = isDark ? const Color(0xFF1E293B) : Colors.white;
 
-                // 箭头
-                Icon(
-                  Icons.chevron_right,
-                  size: 24,
-                  color: isDark ? Colors.grey[600] : Colors.grey[300],
+    return Row(
+      children: [
+        // 关注
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            decoration: BoxDecoration(
+              color: surfaceColor,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                Text(
+                  '248',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '关注',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                    letterSpacing: 1.0,
+                  ),
                 ),
               ],
             ),
           ),
         ),
+
+        const SizedBox(width: 12),
+
+        // 粉丝 - 高亮
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            decoration: BoxDecoration(
+              color: surfaceColor,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: AppTheme.primary.withValues(alpha: 0.2),
+                width: 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                Text(
+                  '14.2k',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.primary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '粉丝',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppTheme.primary,
+                    letterSpacing: 1.0,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        const SizedBox(width: 12),
+
+        // 动态
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            decoration: BoxDecoration(
+              color: surfaceColor,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                Text(
+                  '89',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '动态',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                    letterSpacing: 1.0,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 功能卡片区 - 服务 + 已收藏 双卡片
+  Widget _buildFeatureCards(bool isDark) {
+    final surfaceColor = isDark ? const Color(0xFF1E293B) : Colors.white;
+
+    return SizedBox(
+      height: 170,
+      child: Row(
+        children: [
+          // 服务卡片
+          Expanded(
+            child: GestureDetector(
+              onTap: () {},
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: surfaceColor,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      blurRadius: 20,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  children: [
+                    // 背景图标
+                    Positioned(
+                      top: -8,
+                      right: -8,
+                      child: Icon(
+                        Icons.medical_services_outlined,
+                        size: 80,
+                        color: AppTheme.primary.withValues(alpha: 0.08),
+                      ),
+                    ),
+                    // 内容
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: AppTheme.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Icon(
+                            Icons.medical_services_outlined,
+                            size: 20,
+                            color: AppTheme.primary,
+                          ),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '服务',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '管理实用工具',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(width: 12),
+
+          // 已收藏卡片 - 深色风格
+          Expanded(
+            child: GestureDetector(
+              onTap: () {},
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E293B) : const Color(0xFF0F172A),
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.15),
+                      blurRadius: 20,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  children: [
+                    // 背景图标
+                    Positioned(
+                      bottom: -12,
+                      right: -12,
+                      child: Icon(
+                        Icons.bookmark,
+                        size: 80,
+                        color: Colors.white.withValues(alpha: 0.08),
+                      ),
+                    ),
+                    // 内容
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Icon(
+                            Icons.bookmark,
+                            size: 20,
+                            color: Colors.white,
+                          ),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              '已收藏',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '我的收藏内容',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: const Color(0xFF94A3B8),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  /// 构建默认头像
+  /// 社区横幅 - 翡翠绿渐变
+  Widget _buildCommunityBanner(bool isDark) {
+    return GestureDetector(
+      onTap: () {},
+      child: Container(
+        height: 110,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: isDark
+                ? [const Color(0xFF065F46), const Color(0xFF064E3B)]
+                : [const Color(0xFF10B981), const Color(0xFF059669)],
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.primary.withValues(alpha: 0.3),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text(
+                  '社区',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '加入讨论',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.white.withValues(alpha: 0.8),
+                  ),
+                ),
+              ],
+            ),
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: const Icon(
+                Icons.public,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 设置入口行
+  Widget _buildSettingsRow(bool isDark) {
+    final surfaceColor = isDark ? const Color(0xFF1E293B) : Colors.white;
+
+    return GestureDetector(
+      onTap: _navigateToSettings,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        decoration: BoxDecoration(
+          color: surfaceColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // 图标
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Icon(
+                Icons.settings_outlined,
+                size: 20,
+                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+              ),
+            ),
+            const SizedBox(width: 14),
+            // 文字
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '设置',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '偏好设置与账户',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right,
+              size: 22,
+              color: isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 默认头像
   Widget _buildDefaultAvatar(String displayName, bool isDark) {
     final initials = displayName.isNotEmpty ? displayName[0].toUpperCase() : '?';
 
@@ -269,7 +754,7 @@ class _ProfilePageState extends State<ProfilePage> {
         child: Text(
           initials,
           style: const TextStyle(
-            fontSize: 28,
+            fontSize: 40,
             fontWeight: FontWeight.bold,
             color: Colors.white,
           ),
@@ -277,92 +762,4 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     );
   }
-
-  /// 构建菜单分组
-  Widget _buildMenuSection({
-    required bool isDark,
-    required List<_MenuItemData> items,
-  }) {
-    return Container(
-      color: isDark ? const Color(0xFF18181B) : Colors.white,
-      child: Column(
-        children: [
-          for (int i = 0; i < items.length; i++) ...[
-            _buildMenuItem(items[i], isDark),
-            if (i < items.length - 1)
-              Divider(
-                height: 1,
-                indent: 56,
-                endIndent: 0,
-                color: isDark ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
-              ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  /// 构建菜单项
-  Widget _buildMenuItem(_MenuItemData item, bool isDark) {
-    return InkWell(
-      onTap: item.onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(
-          children: [
-            // 彩色图标容器
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: item.iconColor,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                item.icon,
-                size: 20,
-                color: Colors.white,
-              ),
-            ),
-
-            const SizedBox(width: 14),
-
-            // 标题
-            Expanded(
-              child: Text(
-                item.title,
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w400,
-                  color: isDark ? Colors.white : const Color(0xFF18181B),
-                ),
-              ),
-            ),
-
-            // 箭头
-            Icon(
-              Icons.chevron_right,
-              size: 22,
-              color: isDark ? Colors.grey[600] : Colors.grey[300],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// 菜单项数据模型
-class _MenuItemData {
-  final IconData icon;
-  final Color iconColor;
-  final String title;
-  final VoidCallback onTap;
-
-  _MenuItemData({
-    required this.icon,
-    required this.iconColor,
-    required this.title,
-    required this.onTap,
-  });
 }
