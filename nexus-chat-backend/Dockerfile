@@ -25,8 +25,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl && \
 # 从构建阶段复制 jar
 COPY --from=builder /app/target/*.jar app.jar
 
-# 创建上传目录并设置权限
-RUN mkdir -p /app/uploads && chmod 777 /app/uploads
+# 创建上传目录和 APK 下载目录并设置权限
+RUN mkdir -p /app/uploads /app/apk && chmod 777 /app/uploads /app/apk
 
 EXPOSE 8080
 

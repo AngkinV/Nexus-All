@@ -496,7 +496,7 @@ class _ProfilePageState extends State<ProfilePage> {
           // 服务卡片
           Expanded(
             child: GestureDetector(
-              onTap: () {},
+              onTap: _navigateToSettings,
               child: Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(

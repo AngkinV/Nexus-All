@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../../../core/config/theme_config.dart';
 import '../../../data/repositories/auth_repository.dart';
 import '../auth/login_page.dart';
+import 'about_page.dart';
 
 /// 设置页面
 class SettingsPage extends StatefulWidget {
@@ -211,11 +212,17 @@ class _SettingsPageState extends State<SettingsPage> {
             // 关于
             _buildMenuSection(
               isDark: isDark,
-              items: const [
+              items: [
                 _SettingsItem(
                   title: '关于 Nexus',
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const AboutPage()),
+                    );
+                  },
                 ),
-                _SettingsItem(
+                const _SettingsItem(
                   title: '帮助与反馈',
                 ),
               ],
@@ -275,9 +282,7 @@ class _SettingsPageState extends State<SettingsPage> {
   /// 构建菜单项
   Widget _buildMenuItem(_SettingsItem item, bool isDark) {
     return InkWell(
-      onTap: () {
-        // TODO: 实现具体设置页面跳转
-      },
+      onTap: item.onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
@@ -350,11 +355,12 @@ class _SettingsPageState extends State<SettingsPage> {
 /// 设置项数据模型
 class _SettingsItem {
   final String title;
-  // ignore: unused_element_parameter - 为将来扩展保留
   final String? subtitle;
+  final VoidCallback? onTap;
 
   const _SettingsItem({
     required this.title,
     this.subtitle,
+    this.onTap,
   });
 }

@@ -22,5 +22,11 @@ public class WebMvcConfig implements WebMvcConfigurer {
         registry.addResourceHandler("/uploads/**")
                 .addResourceLocations("file:uploads/")
                 .setCachePeriod(3600); // 缓存1小时
+
+        // 配置 APK 下载的静态资源访问
+        // 访问 /apk/** 会映射到 apk/ 目录下的文件
+        registry.addResourceHandler("/apk/**")
+                .addResourceLocations("file:apk/")
+                .setCachePeriod(86400); // 缓存24小时
     }
 }

@@ -27,7 +27,7 @@ class ApiConfig {
 
   // ===== 环境配置 =====
   // 本地开发设为 false，部署脚本会自动切换为 true
-  static const bool isProduction = false;
+  static const bool isProduction = true;
 
   // 根据平台获取基础URL
   static String getBaseUrl({bool isAndroid = false}) {

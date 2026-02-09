@@ -48,6 +48,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**", "/ws/**", "/ws-native/**", "/error").permitAll()
                 .requestMatchers("/api/files/preview/**", "/api/files/download/**").permitAll()
                 .requestMatchers("/uploads/**").permitAll() // 静态上传文件访问
+                .requestMatchers("/apk/**").permitAll() // APK 下载
+                .requestMatchers("/api/app/**").permitAll() // 版本检查
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

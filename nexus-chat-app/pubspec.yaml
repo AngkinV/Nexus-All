@@ -52,6 +52,8 @@ dependencies:
   uuid: ^4.3.3
   connectivity_plus: ^5.0.2
   qr_flutter: ^4.1.0
+  package_info_plus: ^8.0.0
+  open_filex: ^4.5.0
 
   # JSON
   json_annotation: ^4.8.1

@@ -73,6 +73,7 @@ services:
       - TZ=Asia/Shanghai
     volumes:
       - uploads_data:/app/uploads
+      - ./apk:/app/apk:ro
     ports:
       - "8080:8080"
     networks:

@@ -1,5 +1,44 @@
 import '../../../core/network/dio_client.dart';
 
+/// 应用更新信息模型
+class AppUpdateModel {
+  final bool hasUpdate;
+  final String? versionName;
+  final int? versionCode;
+  final String? downloadUrl;
+  final String? updateLog;
+  final int? fileSize;
+  final bool forceUpdate;
+
+  AppUpdateModel({
+    required this.hasUpdate,
+    this.versionName,
+    this.versionCode,
+    this.downloadUrl,
+    this.updateLog,
+    this.fileSize,
+    this.forceUpdate = false,
+  });
+
+  factory AppUpdateModel.fromJson(Map<String, dynamic> json) {
+    return AppUpdateModel(
+      hasUpdate: json['hasUpdate'] ?? false,
+      versionName: json['versionName'],
+      versionCode: json['versionCode'],
+      downloadUrl: json['downloadUrl'],
+      updateLog: json['updateLog'],
+      fileSize: json['fileSize'],
+      forceUpdate: json['forceUpdate'] ?? false,
+    );
+  }
+
+  String get fileSizeDisplay {
+    if (fileSize == null) return '';
+    final mb = fileSize! / (1024 * 1024);
+    return '${mb.toStringAsFixed(1)} MB';
+  }
+}
+
 /// 用户统计数据模型
 class UserStatsModel {
   final int followingCount;
@@ -54,5 +93,14 @@ class UserApiService {
       queryParameters: {'followerId': currentUserId},
     );
     return response.data['isFollowing'] == true;
+  }
+
+  /// 检查应用更新
+  Future<AppUpdateModel> checkUpdate(int currentVersionCode) async {
+    final response = await _dioClient.get(
+      '/api/app/check-update',
+      queryParameters: {'currentVersionCode': currentVersionCode},
+    );
+    return AppUpdateModel.fromJson(response.data);
   }
 }
